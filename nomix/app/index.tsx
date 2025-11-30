@@ -1,9 +1,10 @@
 import { StyleSheet, Text, View } from 'react-native'
 import React from 'react'
+// Splash Screen
 
 const index = () => {
   return (
-    <View>
+    <View style={styles.container}>
       <Text>Nomix</Text>
     </View>
   )
