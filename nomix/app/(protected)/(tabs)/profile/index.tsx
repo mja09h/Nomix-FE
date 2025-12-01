@@ -100,7 +100,9 @@ const Profile = () => {
               style={styles.menuItem}
               activeOpacity={0.7}
               onPress={() => {
-                // Navigation logic here
+                if (item.route) {
+                  router.push(item.route);
+                }
               }}
             >
               <View style={styles.menuItemLeft}>
