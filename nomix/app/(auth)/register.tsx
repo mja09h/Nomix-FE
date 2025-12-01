@@ -276,14 +276,11 @@ const Register = () => {
               activeOpacity={0.8}
               style={styles.buttonWrapper}
             >
-              <LinearGradient
-                colors={["#00FFFF", "#FF00FF"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.button}
-              >
-                <Text style={styles.buttonText}>Sign Up</Text>
-              </LinearGradient>
+              <View style={styles.buttonContainer}>
+                <View style={styles.buttonBackground}>
+                  <Text style={styles.buttonText}>Sign Up</Text>
+                </View>
+              </View>
             </TouchableOpacity>
 
             <View style={styles.loginLinkContainer}>
@@ -375,7 +372,7 @@ const styles = StyleSheet.create({
   },
   buttonWrapper: {
     marginTop: 20,
-    shadowColor: "#FF00FF",
+    shadowColor: "#00FFFF", // Cyan shadow
     shadowOffset: {
       width: 0,
       height: 0,
@@ -383,15 +380,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 5,
-  },
-  button: {
-    paddingVertical: 16,
     borderRadius: 30,
+  },
+  buttonContainer: {
+    borderRadius: 30,
+    padding: 2, // Width of the gradient border
+    overflow: "hidden",
+    backgroundColor: "#00FFFF", // Fallback or static border color
+  },
+  buttonBackground: {
+    backgroundColor: "#050510", // Match app background
+    borderRadius: 28, // slightly less than container
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 14, // slightly less than before to account for border
   },
   buttonText: {
-    color: "#FFFFFF",
+    color: "#00FFFF", // Cyan text
     fontSize: 18,
     fontWeight: "bold",
     letterSpacing: 1,
