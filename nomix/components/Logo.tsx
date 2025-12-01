@@ -123,7 +123,7 @@ const Logo = () => {
         {/* Logo Image Inside the Blob */}
         <View style={styles.logoImageContainer}>
           <Image
-            source={require("../assets/nomix-logo2 .png")}
+            source={require("../assets/nomix-logo2.png")}
             style={styles.logoImage}
             resizeMode="contain"
           />
