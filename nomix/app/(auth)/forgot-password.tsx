@@ -21,21 +21,11 @@ import Svg, {
   Path,
 } from "react-native-svg";
 import Logo from "../../components/Logo";
-import { Ionicons } from "@expo/vector-icons";
 
-const Login = () => {
+const ForgotPassword = () => {
   const router = useRouter();
-
-  const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-
-  const [errors, setErrors] = useState({
-    identifier: "",
-    password: "",
-  });
-
-  // Focus state for animations/styling
+  const [email, setEmail] = useState("");
+  const [errors, setErrors] = useState({ email: "" });
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
   const validateEmail = (email: string) => {
@@ -43,46 +33,30 @@ const Login = () => {
     return re.test(email);
   };
 
-  const handleLogin = () => {
-    // For dev: Skip validation and go straight to home
-    router.push("/(tabs)/home");
-
-    /* 
-    // Original Validation Logic
+  const handleResetPassword = () => {
     let valid = true;
-    let newErrors = {
-      identifier: "",
-      password: "",
-    };
+    let newErrors = { email: "" };
 
-    // Identifier validation (Email or Username)
-    if (!identifier.trim()) {
-      newErrors.identifier = "Email or Username is required";
+    if (!email.trim()) {
+      newErrors.email = "Email is required";
       valid = false;
-    } else if (identifier.includes("@") && !validateEmail(identifier)) {
-      // If it looks like an email (has @), validate strict email format
-      newErrors.identifier = "Invalid email format";
-      valid = false;
-    }
-
-    // Password validation
-    if (!password) {
-      newErrors.password = "Password is required";
+    } else if (!validateEmail(email)) {
+      newErrors.email = "Invalid email format";
       valid = false;
     }
 
     setErrors(newErrors);
 
     if (valid) {
-      // Proceed with login logic here
-      Alert.alert("Success", "Login successful!", [
-        { text: "OK", onPress: () => router.push("/(tabs)/home") },
-      ]);
+      Alert.alert(
+        "Reset Email Sent",
+        "Check your email for instructions to reset your password.",
+        [{ text: "OK", onPress: () => router.back() }]
+      );
     }
-    */
   };
 
-  // Blob Animation Component for Background
+  // Reusing BlobBackground component logic
   const BlobBackground = ({
     isFocused,
     hasError,
@@ -162,17 +136,13 @@ const Login = () => {
     );
   };
 
-  // Helper to render Input with Liquid Background Effect
   const renderInput = (
     label: string,
     value: string,
     setValue: (text: string) => void,
     fieldKey: string,
     placeholder: string,
-    options: any = {},
-    isPassword: boolean = false,
-    showPassword: boolean = false,
-    togglePassword: () => void = () => {}
+    options: any = {}
   ) => {
     const isFocused = focusedInput === fieldKey;
     const hasError = !!errors[fieldKey as keyof typeof errors];
@@ -181,14 +151,10 @@ const Login = () => {
       <View style={styles.inputGroup}>
         <Text style={styles.label}>{label}</Text>
         <View style={styles.inputContainer}>
-          {/* Animated Liquid Background */}
           <BlobBackground isFocused={isFocused} hasError={hasError} />
-
-          {/* Static Border for inactive state */}
           {!isFocused && !hasError && (
             <View style={[StyleSheet.absoluteFill, styles.inactiveBorder]} />
           )}
-
           <View style={styles.innerInputContainer}>
             <TextInput
               style={styles.input}
@@ -199,22 +165,8 @@ const Login = () => {
               onFocus={() => setFocusedInput(fieldKey)}
               onBlur={() => setFocusedInput(null)}
               autoCapitalize="none"
-              secureTextEntry={isPassword && !showPassword}
               {...options}
             />
-            {isPassword && (
-              <TouchableOpacity
-                onPress={togglePassword}
-                style={styles.eyeIcon}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={showPassword ? "eye-off" : "eye"}
-                  size={20}
-                  color="rgba(255, 255, 255, 0.6)"
-                />
-              </TouchableOpacity>
-            )}
           </View>
         </View>
         {hasError ? (
@@ -228,7 +180,6 @@ const Login = () => {
 
   return (
     <View style={styles.root}>
-      {/* Background Logo */}
       <View style={styles.backgroundLogoContainer} pointerEvents="none">
         <Logo />
       </View>
@@ -242,54 +193,37 @@ const Login = () => {
         >
           <View style={styles.container}>
             <View style={styles.header}>
-              <Text style={styles.title}>Welcome Back</Text>
-              <Text style={styles.subtitle}>Sign in to continue</Text>
+              <Text style={styles.title}>Forgot Password</Text>
+              <Text style={styles.subtitle}>
+                Enter your email to reset your password
+              </Text>
             </View>
 
             <View style={styles.form}>
               {renderInput(
-                "Email or Username",
-                identifier,
-                setIdentifier,
-                "identifier",
-                "Enter your email or username",
+                "Email",
+                email,
+                setEmail,
+                "email",
+                "Enter your email",
                 { keyboardType: "email-address" }
               )}
-              {renderInput(
-                "Password",
-                password,
-                setPassword,
-                "password",
-                "Enter your password",
-                {},
-                true,
-                showPassword,
-                () => setShowPassword(!showPassword)
-              )}
 
               <TouchableOpacity
-                onPress={() => router.push("/forgot-password")}
-                style={styles.forgotPasswordContainer}
-              >
-                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={handleLogin}
+                onPress={handleResetPassword}
                 activeOpacity={0.8}
                 style={styles.buttonWrapper}
               >
                 <View style={styles.buttonContainer}>
                   <View style={styles.buttonBackground}>
-                    <Text style={styles.buttonText}>Sign In</Text>
+                    <Text style={styles.buttonText}>Reset Password</Text>
                   </View>
                 </View>
               </TouchableOpacity>
 
-              <View style={styles.registerLinkContainer}>
-                <Text style={styles.registerText}>Don't have an account? </Text>
-                <TouchableOpacity onPress={() => router.push("/register")}>
-                  <Text style={styles.registerLink}>Sign Up</Text>
+              <View style={styles.backLinkContainer}>
+                <TouchableOpacity onPress={() => router.back()}>
+                  <Text style={styles.backLink}>Back to Sign In</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -300,7 +234,7 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default ForgotPassword;
 
 const styles = StyleSheet.create({
   root: {
@@ -312,12 +246,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     opacity: 0.3,
-    zIndex: 0, // Ensure it's at the bottom but visible within root
+    zIndex: 0,
     transform: [{ scale: 1.2 }],
   },
   scrollContainer: {
     flexGrow: 1,
-    zIndex: 1, // Ensure content is above background
+    zIndex: 1,
   },
   container: {
     flex: 1,
@@ -343,6 +277,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#CCCCCC",
     textAlign: "center",
+    paddingHorizontal: 20,
   },
   form: {
     width: "100%",
@@ -361,7 +296,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: "hidden",
     position: "relative",
-    padding: 2, // Border thickness
+    padding: 2,
     backgroundColor: "transparent",
   },
   inactiveBorder: {
@@ -370,21 +305,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   innerInputContainer: {
-    backgroundColor: "rgba(5, 5, 16, 0.8)", // Slightly transparent to show background blur if needed, but solid is safer for text
-    borderRadius: 10, // Slightly less than wrapper
+    backgroundColor: "rgba(5, 5, 16, 0.8)",
+    borderRadius: 10,
     width: "100%",
-    flexDirection: "row",
-    alignItems: "center",
   },
   input: {
     color: "#FFFFFF",
     fontSize: 16,
     padding: 16,
-    flex: 1,
-  },
-  eyeIcon: {
-    padding: 10,
-    marginRight: 5,
+    width: "100%",
   },
   errorText: {
     color: "#FF0055",
@@ -393,7 +322,7 @@ const styles = StyleSheet.create({
     marginLeft: 5,
   },
   buttonWrapper: {
-    marginTop: 30, // Increased margin for login button
+    marginTop: 30,
     shadowColor: "#00FFFF",
     shadowOffset: {
       width: 0,
@@ -424,24 +353,12 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: "uppercase",
   },
-  forgotPasswordContainer: {
-    alignItems: "flex-end",
-    marginBottom: 10,
-  },
-  forgotPasswordText: {
-    color: "#00FFFF",
-    fontSize: 14,
-  },
-  registerLinkContainer: {
+  backLinkContainer: {
     flexDirection: "row",
     justifyContent: "center",
     marginTop: 30,
   },
-  registerText: {
-    color: "#CCCCCC",
-    fontSize: 14,
-  },
-  registerLink: {
+  backLink: {
     color: "#00FFFF",
     fontSize: 14,
     fontWeight: "bold",
