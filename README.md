@@ -38,3 +38,11 @@ This is the frontend repository for the **Nomix** application.
 ### Frontend Developers
 
 - **Mohammad Aljumaah**
+
+## Team 1
+
+- **Mohammad Jassim Aljumaah**
+- **Yousef Alrajhy**
+- **Mohamad AlQalaf**
+- **Fahad Saeed**
+
