@@ -21,6 +21,7 @@ import Svg, {
   Path,
 } from "react-native-svg";
 import Logo from "../../components/Logo";
+import { Ionicons } from "@expo/vector-icons";
 
 const Register = () => {
   const router = useRouter();
@@ -29,6 +30,9 @@ const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [errors, setErrors] = useState({
     username: "",
@@ -184,7 +188,10 @@ const Register = () => {
     setValue: (text: string) => void,
     fieldKey: string,
     placeholder: string,
-    options: any = {}
+    options: any = {},
+    isPassword: boolean = false,
+    showPassword: boolean = false,
+    togglePassword: () => void = () => {}
   ) => {
     const isFocused = focusedInput === fieldKey;
     const hasError = !!errors[fieldKey as keyof typeof errors];
@@ -211,8 +218,22 @@ const Register = () => {
               onFocus={() => setFocusedInput(fieldKey)}
               onBlur={() => setFocusedInput(null)}
               autoCapitalize="none"
+              secureTextEntry={isPassword && !showPassword}
               {...options}
             />
+            {isPassword && (
+              <TouchableOpacity
+                onPress={togglePassword}
+                style={styles.eyeIcon}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={showPassword ? "eye-off" : "eye"}
+                  size={20}
+                  color="rgba(255, 255, 255, 0.6)"
+                />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
         {hasError ? (
@@ -267,7 +288,10 @@ const Register = () => {
                 setPassword,
                 "password",
                 "Enter your password",
-                { secureTextEntry: true }
+                {},
+                true,
+                showPassword,
+                () => setShowPassword(!showPassword)
               )}
               {renderInput(
                 "Confirm Password",
@@ -275,7 +299,10 @@ const Register = () => {
                 setConfirmPassword,
                 "confirmPassword",
                 "Confirm your password",
-                { secureTextEntry: true }
+                {},
+                true,
+                showConfirmPassword,
+                () => setShowConfirmPassword(!showConfirmPassword)
               )}
 
               <TouchableOpacity
@@ -321,7 +348,6 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flexGrow: 1,
-    // Removed solid background color
     zIndex: 1,
   },
   container: {
@@ -375,15 +401,21 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   innerInputContainer: {
-    backgroundColor: "rgba(5, 5, 16, 0.8)", // Slightly transparent
-    borderRadius: 10, // Slightly less than wrapper
+    backgroundColor: "rgba(5, 5, 16, 0.8)",
+    borderRadius: 10,
     width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
   },
   input: {
     color: "#FFFFFF",
     fontSize: 16,
     padding: 16,
-    width: "100%",
+    flex: 1,
+  },
+  eyeIcon: {
+    padding: 10,
+    marginRight: 5,
   },
   errorText: {
     color: "#FF0055",
@@ -393,7 +425,7 @@ const styles = StyleSheet.create({
   },
   buttonWrapper: {
     marginTop: 20,
-    shadowColor: "#00FFFF", // Cyan shadow
+    shadowColor: "#00FFFF",
     shadowOffset: {
       width: 0,
       height: 0,
@@ -405,19 +437,19 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     borderRadius: 30,
-    padding: 2, // Width of the gradient border
+    padding: 2,
     overflow: "hidden",
-    backgroundColor: "#00FFFF", // Fallback or static border color
+    backgroundColor: "#00FFFF",
   },
   buttonBackground: {
-    backgroundColor: "#050510", // Match app background
-    borderRadius: 28, // slightly less than container
+    backgroundColor: "#050510",
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14, // slightly less than before to account for border
+    paddingVertical: 14,
   },
   buttonText: {
-    color: "#00FFFF", // Cyan text
+    color: "#00FFFF",
     fontSize: 18,
     fontWeight: "bold",
     letterSpacing: 1,
