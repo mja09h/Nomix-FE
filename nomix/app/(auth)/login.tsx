@@ -20,6 +20,7 @@ import Svg, {
   Stop,
   Path,
 } from "react-native-svg";
+import Logo from "../../components/Logo";
 
 const Login = () => {
   const router = useRouter();
@@ -200,78 +201,96 @@ const Login = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1 }}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
+    <View style={styles.root}>
+      {/* Background Logo */}
+      <View style={styles.backgroundLogoContainer} pointerEvents="none">
+        <Logo />
+      </View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
       >
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to continue</Text>
-          </View>
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.container}>
+            <View style={styles.header}>
+              <Text style={styles.title}>Welcome Back</Text>
+              <Text style={styles.subtitle}>Sign in to continue</Text>
+            </View>
 
-          <View style={styles.form}>
-            {renderInput(
-              "Email",
-              email,
-              setEmail,
-              "email",
-              "Enter your email",
-              { keyboardType: "email-address" }
-            )}
-            {renderInput(
-              "Password",
-              password,
-              setPassword,
-              "password",
-              "Enter your password",
-              { secureTextEntry: true }
-            )}
+            <View style={styles.form}>
+              {renderInput(
+                "Email",
+                email,
+                setEmail,
+                "email",
+                "Enter your email",
+                { keyboardType: "email-address" }
+              )}
+              {renderInput(
+                "Password",
+                password,
+                setPassword,
+                "password",
+                "Enter your password",
+                { secureTextEntry: true }
+              )}
 
-            <TouchableOpacity
-              onPress={() => {
-                /* Handle forgot password */
-              }}
-              style={styles.forgotPasswordContainer}
-            >
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={handleLogin}
-              activeOpacity={0.8}
-              style={styles.buttonWrapper}
-            >
-              <View style={styles.buttonContainer}>
-                <View style={styles.buttonBackground}>
-                  <Text style={styles.buttonText}>Sign In</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-
-            <View style={styles.registerLinkContainer}>
-              <Text style={styles.registerText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => router.push("/register")}>
-                <Text style={styles.registerLink}>Sign Up</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  /* Handle forgot password */
+                }}
+                style={styles.forgotPasswordContainer}
+              >
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
               </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleLogin}
+                activeOpacity={0.8}
+                style={styles.buttonWrapper}
+              >
+                <View style={styles.buttonContainer}>
+                  <View style={styles.buttonBackground}>
+                    <Text style={styles.buttonText}>Sign In</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+
+              <View style={styles.registerLinkContainer}>
+                <Text style={styles.registerText}>Don't have an account? </Text>
+                <TouchableOpacity onPress={() => router.push("/register")}>
+                  <Text style={styles.registerLink}>Sign Up</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 };
 
 export default Login;
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: "#050510",
+  },
+  backgroundLogoContainer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    opacity: 0.3,
+    zIndex: 0, // Ensure it's at the bottom but visible within root
+    transform: [{ scale: 1.2 }],
+  },
   scrollContainer: {
     flexGrow: 1,
-    backgroundColor: "#050510",
+    zIndex: 1, // Ensure content is above background
   },
   container: {
     flex: 1,
@@ -324,7 +343,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   innerInputContainer: {
-    backgroundColor: "#050510",
+    backgroundColor: "rgba(5, 5, 16, 0.8)", // Slightly transparent to show background blur if needed, but solid is safer for text
     borderRadius: 10, // Slightly less than wrapper
     width: "100%",
   },
