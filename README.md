@@ -2,6 +2,8 @@
 
 This is the frontend repository for the **Nomix** application.
 
+[Nomix Backend](https://github.com/ynalrajhy/NomixBE)
+
 ## 🚀 Tech Stack
 
 - **Framework:** [React Native](https://reactnative.dev/)
