@@ -28,6 +28,7 @@ const Settings = () => {
   const [soundsEnabled, setSoundsEnabled] = useState(true);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
   const handleLanguageChange = (lang: "en" | "ar") => {
     setLanguage(lang);
@@ -217,12 +218,12 @@ const Settings = () => {
             {renderSettingItem({
               icon: "document-text-outline",
               label: t("privacy_policy"),
-              onPress: () => {},
+              onPress: () => router.push("/profile/privacy"),
             })}
             {renderSettingItem({
               icon: "shield-checkmark-outline",
               label: t("terms_of_service"),
-              onPress: () => {},
+              onPress: () => router.push("/profile/terms"),
             })}
           </View>
         </View>
@@ -231,11 +232,9 @@ const Settings = () => {
         <View style={styles.footer}>
           <Text style={styles.versionText}>Nomix v1.0.0</Text>
           <TouchableOpacity
+            style={styles.deleteAccountButton}
             onPress={() => {
-              Alert.alert(t("delete_account"), t("delete_account_confirm"), [
-                { text: t("cancel"), style: "cancel" },
-                { text: t("delete_account"), style: "destructive" },
-              ]);
+              setDeleteModalVisible(true);
             }}
           >
             <Text style={styles.deleteAccountText}>{t("delete_account")}</Text>
@@ -314,6 +313,72 @@ const Settings = () => {
                   >
                     <Text style={styles.cancelButtonText}>{t("cancel")}</Text>
                   </TouchableOpacity>
+                </View>
+              </LinearGradient>
+            </View>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Delete Account Confirmation Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={deleteModalVisible}
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPressOut={() => setDeleteModalVisible(false)}
+        >
+          <TouchableWithoutFeedback>
+            <View style={styles.modalContent}>
+              <LinearGradient
+                colors={["#FF0055", "#FF00FF"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.modalBorder}
+              >
+                <View style={styles.modalInner}>
+                  <Ionicons
+                    name="warning-outline"
+                    size={40}
+                    color="#FF0055"
+                    style={{ marginBottom: 10 }}
+                  />
+                  <Text style={styles.modalTitle}>{t("delete_account")}</Text>
+                  <Text style={styles.modalDescription}>
+                    {t("delete_account_confirm")}
+                  </Text>
+
+                  <View style={styles.modalButtonsRow}>
+                    <TouchableOpacity
+                      style={[
+                        styles.modalActionButton,
+                        styles.modalCancelAction,
+                      ]}
+                      onPress={() => setDeleteModalVisible(false)}
+                    >
+                      <Text style={styles.modalCancelActionText}>
+                        {t("cancel")}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.modalActionButton,
+                        styles.modalDeleteAction,
+                      ]}
+                      onPress={() => {
+                        setDeleteModalVisible(false);
+                        router.replace("/(onboarding)/get-started");
+                      }}
+                    >
+                      <Text style={styles.modalDeleteActionText}>
+                        {t("delete_account")}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </LinearGradient>
             </View>
@@ -444,10 +509,20 @@ const styles = StyleSheet.create({
     color: "#666",
     fontSize: 12,
   },
+  deleteAccountButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255, 0, 85, 0.7)",
+    backgroundColor: "rgba(255, 0, 85, 0.08)",
+  },
   deleteAccountText: {
     color: "#FF0055",
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
   },
   modalOverlay: {
     flex: 1,
@@ -515,5 +590,49 @@ const styles = StyleSheet.create({
     color: "#FF0055",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: "#CCCCCC",
+    textAlign: "center",
+    marginBottom: 20,
+    marginTop: 4,
+  },
+  modalButtonsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+    marginTop: 10,
+    gap: 10,
+  },
+  modalActionButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalCancelAction: {
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  modalDeleteAction: {
+    backgroundColor: "#FF0055",
+    shadowColor: "#FF0055",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  modalCancelActionText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  modalDeleteActionText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

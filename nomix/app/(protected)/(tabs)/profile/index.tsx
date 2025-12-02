@@ -5,31 +5,36 @@ import {
   Image,
   TouchableOpacity,
   ScrollView,
-  Alert,
+  Modal,
 } from "react-native";
-import React from "react";
+import React, { useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Logo from "../../../../components/Logo";
 import { useLanguage } from "../../../../context/LanguageContext";
+import { logout } from "../../../../api/auth";
 
 const Profile = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t, language } = useLanguage();
   const isRTL = language === "ar";
+  const [logoutVisible, setLogoutVisible] = useState(false);
 
   const handleLogout = () => {
-    Alert.alert(t("logout"), t("logout_confirm"), [
-      { text: t("cancel"), style: "cancel" },
-      {
-        text: t("logout"),
-        style: "destructive",
-        onPress: () => router.replace("/(auth)/login"),
-      },
-    ]);
+    setLogoutVisible(true);
+  };
+
+  const confirmLogout = async () => {
+    setLogoutVisible(false);
+    await logout();
+    router.replace("/(auth)/login");
+  };
+
+  const cancelLogout = () => {
+    setLogoutVisible(false);
   };
 
   const menuItems = [
@@ -189,6 +194,48 @@ const Profile = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Logout Modal */}
+      <Modal
+        transparent
+        visible={logoutVisible}
+        animationType="fade"
+        onRequestClose={cancelLogout}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <LinearGradient
+              colors={["rgba(0, 255, 255, 0.15)", "rgba(255, 0, 255, 0.15)"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.modalGradient}
+            >
+              <View style={styles.modalIconContainer}>
+                <Ionicons name="log-out-outline" size={28} color="#FF0055" />
+              </View>
+              <Text style={styles.modalTitle}>{t("logout")}</Text>
+              <Text style={styles.modalMessage}>{t("logout_confirm")}</Text>
+
+              <View style={styles.modalButtonsRow}>
+                <TouchableOpacity
+                  onPress={cancelLogout}
+                  activeOpacity={0.8}
+                  style={[styles.modalButton, styles.modalCancelButton]}
+                >
+                  <Text style={styles.modalCancelText}>{t("cancel")}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={confirmLogout}
+                  activeOpacity={0.8}
+                  style={[styles.modalButton, styles.modalLogoutButton]}
+                >
+                  <Text style={styles.modalLogoutText}>{t("logout")}</Text>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -339,5 +386,84 @@ const styles = StyleSheet.create({
   },
   logoutLabel: {
     color: "#FF0055",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  modalContainer: {
+    width: "100%",
+    maxWidth: 400,
+    borderRadius: 24,
+    overflow: "hidden",
+    backgroundColor: "rgba(5, 5, 16, 0.95)",
+    borderWidth: 1,
+    borderColor: "rgba(0, 255, 255, 0.3)",
+  },
+  modalGradient: {
+    padding: 20,
+  },
+  modalIconContainer: {
+    alignSelf: "center",
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: "rgba(255, 0, 85, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+    backgroundColor: "rgba(255, 0, 85, 0.1)",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: "#CCCCCC",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  modalButtonsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalCancelButton: {
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.15)",
+  },
+  modalLogoutButton: {
+    backgroundColor: "#FF0055",
+    shadowColor: "#FF0055",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  modalCancelText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  modalLogoutText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
   },
 });
