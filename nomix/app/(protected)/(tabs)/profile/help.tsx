@@ -154,7 +154,13 @@ const Help = () => {
             </LinearGradient>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.contactButton} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.contactButton}
+            activeOpacity={0.8}
+            onPress={() =>
+              router.push("/(protected)/(tabs)/profile/support-chat")
+            }
+          >
             <LinearGradient
               colors={["rgba(0, 255, 255, 0.1)", "rgba(255, 0, 255, 0.1)"]}
               style={[
