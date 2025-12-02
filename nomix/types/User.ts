@@ -1,9 +1,9 @@
-
-interface User {
+export interface User {
+    _id?: string;
+    id?: string;
     username: string;
     email: string;
-    password: string;
-    image?: string
-};
+    image?: string;
+}
 
 export default User;

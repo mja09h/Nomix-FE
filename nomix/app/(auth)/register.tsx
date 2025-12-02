@@ -10,6 +10,7 @@ import {
   Platform,
   Animated,
   Easing,
+  ActivityIndicator,
 } from "react-native";
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
@@ -22,9 +23,11 @@ import Svg, {
 } from "react-native-svg";
 import Logo from "../../components/Logo";
 import { Ionicons } from "@expo/vector-icons";
+import client from "../../api/client";
 
 const Register = () => {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -49,7 +52,7 @@ const Register = () => {
     return re.test(email);
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     let valid = true;
     let newErrors = {
       username: "",
@@ -94,10 +97,25 @@ const Register = () => {
     setErrors(newErrors);
 
     if (valid) {
-      // Proceed with registration logic here
-      Alert.alert("Success", "Registration successful!", [
-        { text: "OK", onPress: () => router.push("/(tabs)/home") },
-      ]);
+      setIsLoading(true);
+      try {
+        await client.post("/auth/register", {
+          username: username,
+          email: email,
+          password: password,
+        });
+
+        Alert.alert("Success", "Registration successful! Please log in.", [
+          { text: "OK", onPress: () => router.push("/(auth)/login") },
+        ]);
+      } catch (error: any) {
+        console.error("Registration error", error);
+        const errorMessage =
+          error.response?.data?.message || "Registration failed.";
+        Alert.alert("Error", errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -309,10 +327,15 @@ const Register = () => {
                 onPress={handleRegister}
                 activeOpacity={0.8}
                 style={styles.buttonWrapper}
+                disabled={isLoading}
               >
                 <View style={styles.buttonContainer}>
                   <View style={styles.buttonBackground}>
-                    <Text style={styles.buttonText}>Sign Up</Text>
+                    {isLoading ? (
+                      <ActivityIndicator color="#00FFFF" />
+                    ) : (
+                      <Text style={styles.buttonText}>Sign Up</Text>
+                    )}
                   </View>
                 </View>
               </TouchableOpacity>

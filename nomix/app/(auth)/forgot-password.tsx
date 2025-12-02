@@ -47,9 +47,7 @@ const ForgotPassword = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.logoSection}>
-          <Logo />
-        </View>
+
 
         <View style={styles.formSection}>
           <Text style={styles.title}>{t("auth.forgot_password")}</Text>

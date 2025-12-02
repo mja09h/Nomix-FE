@@ -10,6 +10,7 @@ import {
   Platform,
   Animated,
   Easing,
+  ActivityIndicator,
 } from "react-native";
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
@@ -22,9 +23,13 @@ import Svg, {
 } from "react-native-svg";
 import Logo from "../../components/Logo";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../../context/AuthContext";
+import client from "../../api/client";
 
 const Login = () => {
   const router = useRouter();
+  const { login } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -43,29 +48,18 @@ const Login = () => {
     return re.test(email);
   };
 
-  const handleLogin = () => {
-    // For dev: Skip validation and go straight to home
-    router.push("/(tabs)/home");
-
-    /* 
-    // Original Validation Logic
+  const handleLogin = async () => {
     let valid = true;
     let newErrors = {
       identifier: "",
       password: "",
     };
 
-    // Identifier validation (Email or Username)
     if (!identifier.trim()) {
       newErrors.identifier = "Email or Username is required";
       valid = false;
-    } else if (identifier.includes("@") && !validateEmail(identifier)) {
-      // If it looks like an email (has @), validate strict email format
-      newErrors.identifier = "Invalid email format";
-      valid = false;
     }
 
-    // Password validation
     if (!password) {
       newErrors.password = "Password is required";
       valid = false;
@@ -74,12 +68,32 @@ const Login = () => {
     setErrors(newErrors);
 
     if (valid) {
-      // Proceed with login logic here
-      Alert.alert("Success", "Login successful!", [
-        { text: "OK", onPress: () => router.push("/(tabs)/home") },
-      ]);
+      setIsLoading(true);
+      try {
+        const response = await client.post("/auth/login", {
+          username: identifier, // Backend likely expects username or email
+          password: password,
+        });
+
+        const { token } = response.data;
+        await login(token);
+
+        Alert.alert("Success", "Login successful!", [
+          {
+            text: "OK",
+            onPress: () => router.push("/(protected)/(tabs)/home"),
+          },
+        ]);
+      } catch (error: any) {
+        console.error("Login error", error);
+        const errorMessage =
+          error.response?.data?.message ||
+          "Login failed. Please check your credentials.";
+        Alert.alert("Error", errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
     }
-    */
   };
 
   // Blob Animation Component for Background
@@ -278,10 +292,15 @@ const Login = () => {
                 onPress={handleLogin}
                 activeOpacity={0.8}
                 style={styles.buttonWrapper}
+                disabled={isLoading}
               >
                 <View style={styles.buttonContainer}>
                   <View style={styles.buttonBackground}>
-                    <Text style={styles.buttonText}>Sign In</Text>
+                    {isLoading ? (
+                      <ActivityIndicator color="#00FFFF" />
+                    ) : (
+                      <Text style={styles.buttonText}>Sign In</Text>
+                    )}
                   </View>
                 </View>
               </TouchableOpacity>
