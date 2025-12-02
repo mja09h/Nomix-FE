@@ -2,7 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 
 const TOKEN_KEY = 'nomix_auth_token';
 
-export const getToken = async (): Promise<string | null> => {
+const getToken = async (): Promise<string | null> => {
     try {
         return await SecureStore.getItemAsync(TOKEN_KEY);
     } catch (error) {
@@ -11,7 +11,7 @@ export const getToken = async (): Promise<string | null> => {
     }
 };
 
-export const setToken = async (token: string): Promise<void> => {
+const setToken = async (token: string): Promise<void> => {
     try {
         await SecureStore.setItemAsync(TOKEN_KEY, token);
     } catch (error) {
@@ -19,7 +19,7 @@ export const setToken = async (token: string): Promise<void> => {
     }
 };
 
-export const removeToken = async (): Promise<void> => {
+const removeToken = async (): Promise<void> => {
     try {
         await SecureStore.deleteItemAsync(TOKEN_KEY);
     } catch (error) {
@@ -27,3 +27,6 @@ export const removeToken = async (): Promise<void> => {
     }
 };
 
+
+
+export { getToken, setToken, removeToken };
