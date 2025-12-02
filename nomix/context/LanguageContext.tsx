@@ -114,6 +114,37 @@ const translations: Record<Language, Record<string, string>> = {
     "features.share": "Share & Enjoy",
     "features.share_desc": "Share your creations with friends.",
     "features.continue": "Continue",
+    // Recipes
+    "recipes.title": "My Recipes",
+    "recipes.create_new": "Create New Recipe",
+    "recipes.no_recipes": "No recipes found",
+    "recipes.start_creating": "Start creating your own unique mixes!",
+    "recipes.search_placeholder": "Search recipes...",
+    "recipes.filter": "Filter",
+    "recipes.sort": "Sort",
+
+    // AI Generator
+    "ai_generator.title": "AI Recipe Generator",
+    "ai_generator.enter_ingredients": "Enter Ingredients",
+    "ai_generator.ingredients_placeholder": "Vodka, Lime, Mint...",
+    "ai_generator.enter_mood": "Enter Mood",
+    "ai_generator.mood_placeholder": "Party, Chill, Romantic...",
+    "ai_generator.generate_button": "Generate Recipe",
+
+    // Auth
+    "auth.email": "Email",
+    "auth.password": "Password",
+    "auth.forgot_password": "Forgot Password?",
+    "auth.no_account": "Don't have an account?",
+    "auth.has_account": "Already have an account?",
+    "auth.full_name": "Full Name",
+    "auth.confirm_password": "Confirm Password",
+    "auth.send_reset_link": "Send Reset Link",
+    "auth.reset_link_sent": "Reset Link Sent",
+    "auth.reset_desc": "Enter your email to receive a password reset link.",
+    "auth.back_to_login": "Back to Login",
+    "auth.check_email": "Check your email for the reset link.",
+
     // Get Started
     "get_started.welcome": "Welcome to Nomix",
     "get_started.subtitle": "Discover and create amazing cocktail recipes.",
@@ -217,6 +248,38 @@ const translations: Record<Language, Record<string, string>> = {
     "features.share": "شارك واستمتع",
     "features.share_desc": "شارك إبداعاتك مع الأصدقاء.",
     "features.continue": "متابعة",
+    // Recipes
+    "recipes.title": "وصفاتي",
+    "recipes.create_new": "إنشاء وصفة جديدة",
+    "recipes.no_recipes": "لم يتم العثور على وصفات",
+    "recipes.start_creating": "ابدأ في إنشاء خلطاتك الفريدة!",
+    "recipes.search_placeholder": "البحث عن الوصفات...",
+    "recipes.filter": "تصفية",
+    "recipes.sort": "ترتيب",
+
+    // AI Generator
+    "ai_generator.title": "مولد وصفات الذكاء الاصطناعي",
+    "ai_generator.enter_ingredients": "أدخل المكونات",
+    "ai_generator.ingredients_placeholder": "فودكا، ليمون، نعناع...",
+    "ai_generator.enter_mood": "أدخل الحالة المزاجية",
+    "ai_generator.mood_placeholder": "حفلة، استرخاء، رومانسي...",
+    "ai_generator.generate_button": "توليد الوصفة",
+
+    // Auth
+    "auth.email": "البريد الإلكتروني",
+    "auth.password": "كلمة المرور",
+    "auth.forgot_password": "نسيت كلمة المرور؟",
+    "auth.no_account": "ليس لديك حساب؟",
+    "auth.has_account": "لديك حساب بالفعل؟",
+    "auth.full_name": "الاسم الكامل",
+    "auth.confirm_password": "تأكيد كلمة المرور",
+    "auth.send_reset_link": "إرسال رابط إعادة التعيين",
+    "auth.reset_link_sent": "تم إرسال الرابط",
+    "auth.reset_desc":
+      "أدخل بريدك الإلكتروني لاستلام رابط إعادة تعيين كلمة المرور.",
+    "auth.back_to_login": "العودة لتسجيل الدخول",
+    "auth.check_email": "تحقق من بريدك الإلكتروني للحصول على الرابط.",
+
     // Get Started
     "get_started.welcome": "مرحباً بك في Nomix",
     "get_started.subtitle": "اكتشف وأنشئ وصفات كوكتيل مذهلة.",

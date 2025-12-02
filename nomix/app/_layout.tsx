@@ -25,6 +25,10 @@ const _layout = () => {
             name="(onboarding)/features"
             options={{ headerShown: false }}
           />
+          <Stack.Screen
+            name="(protected)/ai-generator"
+            options={{ headerShown: false }}
+          />
           <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
           <Stack.Screen
             name="(auth)/register"

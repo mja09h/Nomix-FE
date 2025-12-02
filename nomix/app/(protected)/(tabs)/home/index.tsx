@@ -11,6 +11,7 @@ import React from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import Logo from "../../../../components/Logo";
 import { useLanguage } from "../../../../context/LanguageContext";
 
@@ -18,6 +19,7 @@ const { width } = Dimensions.get("window");
 
 const Home = () => {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { t, language } = useLanguage();
   const isRTL = language === "ar";
 
@@ -131,6 +133,55 @@ const Home = () => {
             ))}
           </ScrollView>
         </View>
+
+        {/* AI Generator Button */}
+        <TouchableOpacity
+          style={styles.aiButtonContainer}
+          activeOpacity={0.8}
+          onPress={() => router.push("/(protected)/ai-generator")}
+        >
+          <LinearGradient
+            colors={["#FF0055", "#FF00AA"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.aiButtonGradient}
+          >
+            <View
+              style={[
+                styles.aiButtonContent,
+                isRTL && { flexDirection: "row-reverse" },
+              ]}
+            >
+              <View
+                style={[
+                  styles.aiIconWrapper,
+                  isRTL ? { marginLeft: 15 } : { marginRight: 15 },
+                ]}
+              >
+                <Ionicons name="sparkles" size={24} color="#FFFFFF" />
+              </View>
+              <View
+                style={[
+                  styles.aiTextContainer,
+                  isRTL && { alignItems: "flex-end" },
+                ]}
+              >
+                <Text style={styles.aiButtonTitle}>
+                  {t("ai_generator.title")}
+                </Text>
+                <Text style={styles.aiButtonSubtitle}>
+                  {t("ai_generator.generate_button")}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }} />
+              <Ionicons
+                name={isRTL ? "chevron-back" : "chevron-forward"}
+                size={24}
+                color="#FFFFFF"
+              />
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
 
         {/* Featured Recipes */}
         <View style={styles.section}>
@@ -280,6 +331,49 @@ const styles = StyleSheet.create({
   activeCategoryName: {
     color: "#FFFFFF",
     fontWeight: "bold",
+  },
+  aiButtonContainer: {
+    marginHorizontal: 20,
+    marginTop: 25,
+    shadowColor: "#FF0055",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  aiButtonGradient: {
+    borderRadius: 20,
+    padding: 2,
+  },
+  aiButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1A1A2E", // Keep it dark inside or use gradient fully
+    borderRadius: 18,
+    padding: 15,
+    // If you want full gradient background, remove backgroundColor here and adjust borderRadius
+  },
+  aiIconWrapper: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "rgba(255, 0, 85, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  aiTextContainer: {
+    justifyContent: "center",
+  },
+  aiButtonTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    marginBottom: 4,
+  },
+  aiButtonSubtitle: {
+    fontSize: 12,
+    color: "#FF00AA",
+    fontWeight: "600",
   },
   featuredList: {
     paddingHorizontal: 20,
