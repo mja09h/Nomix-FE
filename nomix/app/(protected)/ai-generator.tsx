@@ -10,6 +10,7 @@ import {
   Platform,
   Animated,
   Easing,
+  Alert,
 } from "react-native";
 import React, { useState, useRef, useEffect } from "react";
 import { LinearGradient } from "expo-linear-gradient";
@@ -18,6 +19,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Logo from "../../components/Logo";
 import { useLanguage } from "../../context/LanguageContext";
+import { generateRecipeWithAI } from "../../api/aiService";
+import { useMutation } from "@tanstack/react-query";
+import client from "../../api/client";
 
 const AiGenerator = () => {
   const insets = useSafeAreaInsets();
@@ -31,7 +35,8 @@ const AiGenerator = () => {
   const [generatedRecipe, setGeneratedRecipe] = useState<null | {
     name: string;
     description: string;
-    instructions: string;
+    instructions: Record<string, string>;
+    calories?: string;
   }>(null);
 
   // Animation values
@@ -61,37 +66,52 @@ const AiGenerator = () => {
     }
   }, [isGenerating]);
 
-  useEffect(() => {
-    if (generatedRecipe) {
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-        easing: Easing.out(Easing.cubic),
-      }).start();
-    } else {
-      fadeAnim.setValue(0);
-    }
-  }, [generatedRecipe]);
+  const saveRecipeMutation = useMutation({
+    mutationFn: async (recipe: any) => {
+      // Map the AI structure to backend structure if needed
+      // Assuming backend accepts { name, description, instructions, ingredients }
+      const response = await client.post("/recipes", {
+        name: recipe.name,
+        description: recipe.description,
+        instructions: JSON.stringify(recipe.instructions), // Store object as string or adjust backend to accept JSON
+        ingredients: ingredients.split(",").map((i) => i.trim()), // Basic parsing
+        calories: recipe.calories,
+        // Add other fields as needed
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      Alert.alert("Success", "Recipe saved to your collection!");
+    },
+    onError: (error: any) => {
+      console.error("Save recipe error", error);
+      Alert.alert("Error", "Failed to save recipe.");
+    },
+  });
 
-  const handleGenerate = () => {
-    if (!ingredients.trim()) return;
+  const handleSave = () => {
+    if (generatedRecipe) {
+      saveRecipeMutation.mutate(generatedRecipe);
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (!ingredients.trim()) {
+      Alert.alert("Required", "Please enter some ingredients first.");
+      return;
+    }
 
     setIsGenerating(true);
     setGeneratedRecipe(null);
 
-    // Simulate AI generation delay
-    setTimeout(() => {
+    try {
+      const recipe = await generateRecipeWithAI(ingredients, mood, language);
+      setGeneratedRecipe(recipe);
+    } catch (error: any) {
+      Alert.alert("Error", error.message);
+    } finally {
       setIsGenerating(false);
-      setGeneratedRecipe({
-        name: "Neon AI Special",
-        description: `A perfect blend based on ${ingredients} for a ${
-          mood || "chill"
-        } vibe.`,
-        instructions:
-          "1. Mix all ingredients in a shaker.\n2. Add ice and shake vigorously.\n3. Strain into a chilled glass.\n4. Garnish with a neon glow stick (optional).",
-      });
-    }, 2500);
+    }
   };
 
   return (
@@ -248,9 +268,26 @@ const AiGenerator = () => {
                       isRTL && { textAlign: "right" },
                     ]}
                   >
-                    {generatedRecipe.name}
+                    {generatedRecipe.name
+                      ? generatedRecipe.name.replace(/['"]/g, "")
+                      : "Untitled Recipe"}
                   </Text>
                 </View>
+
+                {/* Calorie Badge */}
+                {generatedRecipe.calories && (
+                  <View
+                    style={[
+                      styles.calorieBadge,
+                      isRTL && { alignSelf: "flex-end" },
+                    ]}
+                  >
+                    <Ionicons name="flame" size={16} color="#FF4500" />
+                    <Text style={styles.calorieText}>
+                      {generatedRecipe.calories}
+                    </Text>
+                  </View>
+                )}
 
                 <Text
                   style={[styles.resultDesc, isRTL && { textAlign: "right" }]}
@@ -260,14 +297,53 @@ const AiGenerator = () => {
 
                 <View style={styles.divider} />
 
-                <Text
-                  style={[
-                    styles.resultInstructions,
-                    isRTL && { textAlign: "right" },
-                  ]}
+                {/* Render Instructions Cleanly */}
+                <View style={styles.instructionsContainer}>
+                  {generatedRecipe.instructions &&
+                  typeof generatedRecipe.instructions === "object" ? (
+                    Object.entries(generatedRecipe.instructions).map(
+                      ([key, value], index) => {
+                        return (
+                          <View key={key} style={styles.instructionRow}>
+                            <Text style={styles.instructionNumber}>
+                              {index + 1}.
+                            </Text>
+                            <Text
+                              style={[
+                                styles.instructionStep,
+                                isRTL && { textAlign: "right", flex: 1 },
+                              ]}
+                            >
+                              {value}
+                            </Text>
+                          </View>
+                        );
+                      }
+                    )
+                  ) : (
+                    <Text style={styles.instructionStep}>
+                      {/* Fallback if instructions is a string or missing */}
+                      {typeof generatedRecipe.instructions === "string"
+                        ? generatedRecipe.instructions
+                        : "No instructions provided."}
+                    </Text>
+                  )}
+                </View>
+
+                <TouchableOpacity
+                  style={styles.saveButton}
+                  onPress={handleSave}
+                  disabled={saveRecipeMutation.isPending}
                 >
-                  {generatedRecipe.instructions}
-                </Text>
+                  {saveRecipeMutation.isPending ? (
+                    <ActivityIndicator color="#050510" />
+                  ) : (
+                    <>
+                      <Ionicons name="save-outline" size={20} color="#050510" />
+                      <Text style={styles.saveButtonText}>Save Recipe</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
               </LinearGradient>
             </Animated.View>
           )}
@@ -331,7 +407,7 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: "rgba(255, 255, 255, 0.05)",
-    borderRadius: 20, // Smoother corners
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.1)",
     padding: 15,
@@ -352,7 +428,7 @@ const styles = StyleSheet.create({
   },
   generateButton: {
     height: 56,
-    borderRadius: 28, // Fully rounded pill shape
+    borderRadius: 28,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -377,7 +453,7 @@ const styles = StyleSheet.create({
   },
   resultContainer: {
     marginTop: 30,
-    borderRadius: 25, // Smooth rounded corners
+    borderRadius: 25,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(0, 255, 255, 0.3)",
@@ -396,6 +472,26 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#00FFFF",
     marginBottom: 5,
+    flex: 1, // Allow text to wrap if long
+    flexWrap: "wrap",
+  },
+  calorieBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 69, 0, 0.2)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 15,
+    alignSelf: "flex-start",
+    marginBottom: 15,
+    gap: 5,
+    borderWidth: 1,
+    borderColor: "rgba(255, 69, 0, 0.5)",
+  },
+  calorieText: {
+    color: "#FF4500",
+    fontWeight: "bold",
+    fontSize: 14,
   },
   resultDesc: {
     fontSize: 16,
@@ -409,9 +505,47 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.1)",
     marginVertical: 15,
   },
-  resultInstructions: {
+  instructionsContainer: {
+    gap: 10,
+  },
+  instructionHeader: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#FF00FF",
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  instructionStep: {
     fontSize: 16,
     color: "#FFFFFF",
     lineHeight: 24,
+    flex: 1,
+  },
+  instructionRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 10,
+  },
+  instructionNumber: {
+    fontSize: 16,
+    color: "#00FFFF",
+    fontWeight: "bold",
+    width: 25,
+  },
+  saveButton: {
+    backgroundColor: "#00FFFF",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 15,
+    borderRadius: 15,
+    marginTop: 20,
+    gap: 10,
+  },
+  saveButtonText: {
+    color: "#050510",
+    fontWeight: "bold",
+    fontSize: 16,
+    textTransform: "uppercase",
   },
 });

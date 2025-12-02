@@ -5,14 +5,22 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  ActivityIndicator,
+  RefreshControl,
+  Modal,
+  TextInput,
+  Alert,
 } from "react-native";
-import React from "react";
+import React, { useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Logo from "../../../../components/Logo";
 import { useLanguage } from "../../../../context/LanguageContext";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import client from "../../../../api/client";
+import { Category } from "../../../../types/Category";
 
 const { width } = Dimensions.get("window");
 const COLUMN_COUNT = 2;
@@ -24,17 +32,57 @@ const Categories = () => {
   const router = useRouter();
   const { t, language } = useLanguage();
   const isRTL = language === "ar";
+  const queryClient = useQueryClient();
 
-  const categories = [
-    { id: 1, name: t("cat_classic_cocktails"), icon: "wine", count: 124 },
-    { id: 2, name: t("cat_tropical_tiki"), icon: "sunny", count: 85 },
-    { id: 3, name: t("cat_mocktails"), icon: "water", count: 42 },
-    { id: 4, name: t("cat_shots"), icon: "flash", count: 63 },
-    { id: 5, name: t("cat_party_punches"), icon: "color-wand", count: 28 },
-    { id: 6, name: t("cat_healthy_mixes"), icon: "leaf", count: 35 },
-    { id: 7, name: t("cat_coffee_tea"), icon: "cafe", count: 19 },
-    { id: 8, name: t("cat_seasonal"), icon: "snow", count: 12 },
-  ];
+  const [modalVisible, setModalVisible] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+
+  const {
+    data: categories,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const response = await client.get("/categories");
+      return response.data as Category[];
+    },
+  });
+
+  const createCategoryMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const response = await client.post("/categories", { name });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      setModalVisible(false);
+      setNewCategoryName("");
+      Alert.alert("Success", "Category created successfully!");
+    },
+    onError: (error: any) => {
+      console.error("Create category error", error);
+      Alert.alert("Error", "Failed to create category");
+    },
+  });
+
+  const handleCreateCategory = () => {
+    if (!newCategoryName.trim()) {
+      Alert.alert("Error", "Category name is required");
+      return;
+    }
+    createCategoryMutation.mutate(newCategoryName);
+  };
+
+  // Fallback icons if not provided by backend (just for demo consistency)
+  const getIcon = (name: string) => {
+    if (name.toLowerCase().includes("cocktail")) return "wine";
+    if (name.toLowerCase().includes("tea")) return "cafe";
+    if (name.toLowerCase().includes("shot")) return "flash";
+    if (name.toLowerCase().includes("healthy")) return "leaf";
+    return "grid";
+  };
 
   return (
     <View style={styles.root}>
@@ -48,90 +96,167 @@ const Categories = () => {
         style={[
           styles.header,
           { paddingTop: insets.top + 20 },
-          isRTL && { alignItems: "flex-end" },
+          isRTL && { flexDirection: "row-reverse" },
         ]}
       >
-        <Text style={styles.headerTitle}>{t("categories")}</Text>
-        <Text style={styles.headerSubtitle}>{t("explore_by_type")}</Text>
+        <View
+          style={{ flex: 1, alignItems: isRTL ? "flex-end" : "flex-start" }}
+        >
+          <Text style={styles.headerTitle}>{t("categories")}</Text>
+          <Text style={styles.headerSubtitle}>{t("explore_by_type")}</Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => setModalVisible(true)}
+          style={styles.addButton}
+        >
+          <Ionicons name="add" size={28} color="#00FFFF" />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
       >
-        <View style={[styles.grid, isRTL && { flexDirection: "row-reverse" }]}>
-          {categories.map((category, index) => (
-            <TouchableOpacity
-              key={category.id}
-              activeOpacity={0.8}
-              style={styles.cardWrapper}
-            >
-              <LinearGradient
-                colors={["#00FFFF", "#FF00FF"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.cardBorder}
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {t("create_new_category") || "Create Category"}
+            </Text>
+
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Category Name"
+              placeholderTextColor="#666"
+              value={newCategoryName}
+              onChangeText={setNewCategoryName}
+              autoFocus
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setModalVisible(false)}
               >
-                <View style={styles.innerCard}>
-                  <View
-                    style={[
-                      styles.iconContainer,
-                      isRTL && { alignItems: "flex-end" },
-                    ]}
-                  >
-                    <LinearGradient
-                      colors={[
-                        "rgba(0, 255, 255, 0.2)",
-                        "rgba(255, 0, 255, 0.2)",
+                <Text style={styles.buttonTextSmall}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.createButton]}
+                onPress={handleCreateCategory}
+                disabled={createCategoryMutation.isPending}
+              >
+                {createCategoryMutation.isPending ? (
+                  <ActivityIndicator color="#050510" />
+                ) : (
+                  <Text style={[styles.buttonTextSmall, { color: "#050510" }]}>
+                    Create
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {isLoading ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#00FFFF" />
+        </View>
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isLoading}
+              onRefresh={refetch}
+              tintColor="#00FFFF"
+            />
+          }
+        >
+          <View
+            style={[styles.grid, isRTL && { flexDirection: "row-reverse" }]}
+          >
+            {categories?.map((category) => (
+              <TouchableOpacity
+                key={category._id || category.id}
+                activeOpacity={0.8}
+                style={styles.cardWrapper}
+                onPress={() => {
+                  // Navigate to filtered recipes (Assuming route exists or simply log for now)
+                  console.log("Navigate to category:", category.name);
+                }}
+              >
+                <LinearGradient
+                  colors={["#00FFFF", "#FF00FF"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.cardBorder}
+                >
+                  <View style={styles.innerCard}>
+                    <View
+                      style={[
+                        styles.iconContainer,
+                        isRTL && { alignItems: "flex-end" },
                       ]}
-                      style={styles.iconBackground}
+                    >
+                      <LinearGradient
+                        colors={[
+                          "rgba(0, 255, 255, 0.2)",
+                          "rgba(255, 0, 255, 0.2)",
+                        ]}
+                        style={styles.iconBackground}
+                      >
+                        <Ionicons
+                          name={getIcon(category.name) as any}
+                          size={32}
+                          color="#FFFFFF"
+                        />
+                      </LinearGradient>
+                    </View>
+
+                    <View
+                      style={[
+                        styles.textContainer,
+                        isRTL && { alignItems: "flex-end" },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.categoryName,
+                          isRTL && { textAlign: "right" },
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {category.name}
+                      </Text>
+                      {/* Backend might not return count yet */}
+                      {/* <Text style={styles.itemCount}>
+                        {category.count} {t("recipes")}
+                      </Text> */}
+                    </View>
+
+                    {/* Arrow Icon */}
+                    <View
+                      style={[
+                        styles.arrowContainer,
+                        isRTL ? { left: 15, right: undefined } : { right: 15 },
+                      ]}
                     >
                       <Ionicons
-                        name={category.icon as any}
-                        size={32}
-                        color="#FFFFFF"
+                        name={isRTL ? "arrow-back" : "arrow-forward"}
+                        size={20}
+                        color="#666"
                       />
-                    </LinearGradient>
+                    </View>
                   </View>
-
-                  <View
-                    style={[
-                      styles.textContainer,
-                      isRTL && { alignItems: "flex-end" },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.categoryName,
-                        isRTL && { textAlign: "right" },
-                      ]}
-                    >
-                      {category.name}
-                    </Text>
-                    <Text style={styles.itemCount}>
-                      {category.count} {t("recipes")}
-                    </Text>
-                  </View>
-
-                  {/* Arrow Icon */}
-                  <View
-                    style={[
-                      styles.arrowContainer,
-                      isRTL ? { left: 15, right: undefined } : { right: 15 },
-                    ]}
-                  >
-                    <Ionicons
-                      name={isRTL ? "arrow-back" : "arrow-forward"}
-                      size={20}
-                      color="#666"
-                    />
-                  </View>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 };
@@ -155,6 +280,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
     zIndex: 10,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerTitle: {
     fontSize: 32,
@@ -228,5 +358,67 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 15,
     right: 15,
+  },
+  addButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(0, 255, 255, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0, 255, 255, 0.3)",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    width: "100%",
+    backgroundColor: "#1A1A2E",
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "rgba(0, 255, 255, 0.3)",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  modalInput: {
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 10,
+    padding: 15,
+    color: "#FFFFFF",
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: 15,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelButton: {
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+  },
+  createButton: {
+    backgroundColor: "#00FFFF",
+  },
+  buttonTextSmall: {
+    color: "#FFFFFF",
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });
