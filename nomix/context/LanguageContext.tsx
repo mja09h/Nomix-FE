@@ -41,10 +41,58 @@ const translations: Record<Language, Record<string, string>> = {
     privacy_policy: "Privacy Policy",
     terms_of_service: "Terms of Service",
     delete_account: "Delete Account",
-    delete_account_confirm: "This action cannot be undone.",
+    delete_account_confirm:
+      "This will log you out of Nomix and take you back to the Get Started screen. This action cannot be undone.",
     select_language: "Select Language",
     english: "English",
     arabic: "Arabic",
+
+    // Terms of Service (short & playful)
+    terms_title: "Terms of Service",
+    terms_subtitle:
+      "Lawyers would write 20 pages. We’ll keep it to the important bits.",
+    terms_section_1_title: "1. What Nomix is (and isn’t)",
+    terms_section_1_body:
+      "Nomix is a fun app to discover and create drink ideas. It’s not a medical service, life coach, or a guarantee that your mix won’t taste weird if you add everything in your fridge.",
+    terms_section_2_title: "2. Your responsibilities",
+    terms_section_2_body:
+      "Use Nomix like a decent human: don’t break the law, don’t spam, and don’t upload anything illegal or hateful. If you share recipes or content, you promise you have the rights to share them.",
+    terms_section_3_title: "3. Content & AI magic",
+    terms_section_3_body:
+      "Sometimes recipes or suggestions come from AI. They might be brilliant; they might be cursed. You use them at your own risk (and taste buds). Always drink responsibly and follow local laws.",
+    terms_section_4_title: "4. Accounts & access",
+    terms_section_4_body:
+      "Keep your password safe and don’t share your account. We can suspend or remove access if we see abuse, security issues, or things that break these terms.",
+    terms_section_5_title: "5. No guarantees (but we try)",
+    terms_section_5_body:
+      "We do our best to keep Nomix online and bug-free, but we can’t promise zero downtime or perfect results. The app is provided “as is” — if something breaks, we’ll try to fix it, not send you a free cocktail.",
+    terms_section_6_title: "6. Changes & contact",
+    terms_section_6_body:
+      "We may update these terms from time to time. If the changes are big, we’ll try to let you know in the app. If you keep using Nomix after that, it means you accept the new terms. Questions? Email us at support@nomix.app.",
+    terms_last_updated: "Last updated: December 2, 2025",
+    // Privacy Policy (short & friendly)
+    privacy_policy_title: "Short & Sweet Privacy",
+    privacy_policy_subtitle:
+      "We only collect what we need to keep your mixes, favorites, and AI magic running smoothly.",
+    privacy_section_1_title: "1. What we know about you",
+    privacy_section_1_body:
+      "Basic stuff: your account details and what you do inside Nomix (like saved recipes and button taps). No creepy tracking of your entire life — just enough to make the app work and improve it.",
+    privacy_section_2_title: "2. How we use it (no evil plans)",
+    privacy_section_2_body:
+      "We use your data to run Nomix, fix bugs, suggest better drinks, and keep bad actors out. We don’t sell your info, trade it for pizza, or spam you with nonsense.",
+    privacy_section_3_title: "3. Who sees your data",
+    privacy_section_3_body:
+      "Mainly us and a few trusted services that help us host and operate the app. They’re contractually not allowed to run off and start their own cocktail empire with your data.",
+    privacy_section_4_title: "4. Your powers",
+    privacy_section_4_body:
+      "You can edit some info in the app, and you can always reach out if you want to ask about, fix, or delete your data where the law allows. If something feels off, tell us — we actually read those messages.",
+    privacy_section_5_title: "5. Changes (no plot twists)",
+    privacy_section_5_body:
+      "If we ever change this policy, we’ll update it here and, if it’s a big change, we’ll let you know in the app. If you keep shaking drinks with us after that, it means you’re cool with the new version.",
+    privacy_section_6_title: "6. Final sip",
+    privacy_section_6_body:
+      "Nomix is built for fun and creativity, not data hoarding. If you have questions, bug reports, or cocktail ideas, reach us at support@nomix.app.",
+    privacy_last_updated: "Last updated: December 2, 2025",
 
     // Home
     greeting: "Hello, Barista",
@@ -175,10 +223,59 @@ const translations: Record<Language, Record<string, string>> = {
     privacy_policy: "سياسة الخصوصية",
     terms_of_service: "شروط الخدمة",
     delete_account: "حذف الحساب",
-    delete_account_confirm: "لا يمكن التراجع عن هذا الإجراء.",
+    delete_account_confirm:
+      "سيتم تسجيل خروجك من Nomix والعودة إلى شاشة البدء. لا يمكن التراجع عن هذا الإجراء.",
     select_language: "اختر اللغة",
     english: "الإنجليزية",
     arabic: "العربية",
+
+    // Privacy Policy (short & friendly – English text placeholder)
+    privacy_policy_title: "Short & Sweet Privacy",
+    privacy_policy_subtitle:
+      "We only collect what we need to keep your mixes, favorites, and AI magic running smoothly.",
+    privacy_section_1_title: "1. What we know about you",
+    privacy_section_1_body:
+      "Basic stuff: your account details and what you do inside Nomix (like saved recipes and button taps). No creepy tracking of your entire life — just enough to make the app work and improve it.",
+    privacy_section_2_title: "2. How we use it (no evil plans)",
+    privacy_section_2_body:
+      "We use your data to run Nomix, fix bugs, suggest better drinks, and keep bad actors out. We don’t sell your info, trade it for pizza, or spam you with nonsense.",
+    privacy_section_3_title: "3. Who sees your data",
+    privacy_section_3_body:
+      "Mainly us and a few trusted services that help us host and operate the app. They’re contractually not allowed to run off and start their own cocktail empire with your data.",
+    privacy_section_4_title: "4. Your powers",
+    privacy_section_4_body:
+      "You can edit some info in the app, and you can always reach out if you want to ask about, fix, or delete your data where the law allows. If something feels off, tell us — we actually read those messages.",
+    privacy_section_5_title: "5. Changes (no plot twists)",
+    privacy_section_5_body:
+      "If we ever change this policy, we’ll update it here and, if it’s a big change, we’ll let you know in the app. If you keep shaking drinks with us after that, it means you’re cool with the new version.",
+    privacy_section_6_title: "6. Final sip",
+    privacy_section_6_body:
+      "Nomix is built for fun and creativity, not data hoarding. If you have questions, bug reports, or cocktail ideas, reach us at support@nomix.app.",
+    privacy_last_updated: "Last updated: December 2, 2025",
+
+    // Terms of Service (short & playful – English text placeholder)
+    terms_title: "Terms of Service",
+    terms_subtitle:
+      "Lawyers would write 20 pages. We’ll keep it to the important bits.",
+    terms_section_1_title: "1. What Nomix is (and isn’t)",
+    terms_section_1_body:
+      "Nomix is a fun app to discover and create drink ideas. It’s not a medical service, life coach, or a guarantee that your mix won’t taste weird if you add everything in your fridge.",
+    terms_section_2_title: "2. Your responsibilities",
+    terms_section_2_body:
+      "Use Nomix like a decent human: don’t break the law, don’t spam, and don’t upload anything illegal or hateful. If you share recipes or content, you promise you have the rights to share them.",
+    terms_section_3_title: "3. Content & AI magic",
+    terms_section_3_body:
+      "Sometimes recipes or suggestions come from AI. They might be brilliant; they might be cursed. You use them at your own risk (and taste buds). Always drink responsibly and follow local laws.",
+    terms_section_4_title: "4. Accounts & access",
+    terms_section_4_body:
+      "Keep your password safe and don’t share your account. We can suspend or remove access if we see abuse, security issues, or things that break these terms.",
+    terms_section_5_title: "5. No guarantees (but we try)",
+    terms_section_5_body:
+      "We do our best to keep Nomix online and bug-free, but we can’t promise zero downtime or perfect results. The app is provided “as is” — if something breaks, we’ll try to fix it, not send you a free cocktail.",
+    terms_section_6_title: "6. Changes & contact",
+    terms_section_6_body:
+      "We may update these terms from time to time. If the changes are big, we’ll try to let you know in the app. If you keep using Nomix after that, it means you accept the new terms. Questions? Email us at support@nomix.app.",
+    terms_last_updated: "Last updated: December 2, 2025",
 
     // Home
     greeting: "مرحباً، باريستا",

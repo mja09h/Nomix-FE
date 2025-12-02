@@ -23,7 +23,7 @@ import Svg, {
 } from "react-native-svg";
 import Logo from "../../components/Logo";
 import { Ionicons } from "@expo/vector-icons";
-import client from "../../api/client";
+import { register } from "../../api/auth";
 
 const Register = () => {
   const router = useRouter();
@@ -99,20 +99,18 @@ const Register = () => {
     if (valid) {
       setIsLoading(true);
       try {
-        await client.post("/auth/register", {
-          username: username,
-          email: email,
-          password: password,
-        });
+        const result = await register(username, email, password);
 
-        Alert.alert("Success", "Registration successful! Please log in.", [
-          { text: "OK", onPress: () => router.push("/(auth)/login") },
-        ]);
+        if (result.success) {
+          Alert.alert("Success", "Registration successful! Please log in.", [
+            { text: "OK", onPress: () => router.push("/(auth)/login") },
+          ]);
+        } else {
+          Alert.alert("Error", result.error || "Registration failed.");
+        }
       } catch (error: any) {
         console.error("Registration error", error);
-        const errorMessage =
-          error.response?.data?.message || "Registration failed.";
-        Alert.alert("Error", errorMessage);
+        Alert.alert("Error", "Registration failed.");
       } finally {
         setIsLoading(false);
       }
