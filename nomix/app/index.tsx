@@ -13,7 +13,7 @@ const index = () => {
 
       <View style={styles.buttonContainer}>
         <TouchableOpacity
-          onPress={() => router.push("/get-started")}
+          onPress={() => router.push("/features")}
           activeOpacity={0.8}
         >
           <LinearGradient

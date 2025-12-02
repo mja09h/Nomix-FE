@@ -1,0 +1,9 @@
+
+interface User {
+    username: string;
+    email: string;
+    password: string;
+    image?: string
+};
+
+export default User;

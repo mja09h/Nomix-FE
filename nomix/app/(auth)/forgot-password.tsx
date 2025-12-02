@@ -4,233 +4,117 @@ import {
   View,
   TextInput,
   TouchableOpacity,
-  Alert,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Animated,
-  Easing,
+  ScrollView,
+  Alert,
 } from "react-native";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import Svg, {
-  Defs,
-  LinearGradient as SvgGradient,
-  Stop,
-  Path,
-} from "react-native-svg";
+import { Ionicons } from "@expo/vector-icons";
 import Logo from "../../components/Logo";
+import { useLanguage } from "../../context/LanguageContext";
 
 const ForgotPassword = () => {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [errors, setErrors] = useState({ email: "" });
-  const [focusedInput, setFocusedInput] = useState<string | null>(null);
+  const { t, language } = useLanguage();
+  const isRTL = language === "ar";
 
-  const validateEmail = (email: string) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
-  };
+  const [email, setEmail] = useState("");
 
   const handleResetPassword = () => {
-    let valid = true;
-    let newErrors = { email: "" };
-
-    if (!email.trim()) {
-      newErrors.email = "Email is required";
-      valid = false;
-    } else if (!validateEmail(email)) {
-      newErrors.email = "Invalid email format";
-      valid = false;
+    if (!email) {
+      Alert.alert(t("error"), t("auth.check_email"));
+      return;
     }
-
-    setErrors(newErrors);
-
-    if (valid) {
-      Alert.alert(
-        "Reset Email Sent",
-        "Check your email for instructions to reset your password.",
-        [{ text: "OK", onPress: () => router.back() }]
-      );
-    }
-  };
-
-  // Reusing BlobBackground component logic
-  const BlobBackground = ({
-    isFocused,
-    hasError,
-  }: {
-    isFocused: boolean;
-    hasError: boolean;
-  }) => {
-    const rotateAnim = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-      if (isFocused) {
-        Animated.loop(
-          Animated.timing(rotateAnim, {
-            toValue: 1,
-            duration: 4000,
-            easing: Easing.linear,
-            useNativeDriver: true,
-          })
-        ).start();
-      } else {
-        rotateAnim.stopAnimation();
-        rotateAnim.setValue(0);
-      }
-    }, [isFocused]);
-
-    const rotate = rotateAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: ["0deg", "360deg"],
-    });
-
-    if (!isFocused && !hasError) return null;
-
-    return (
-      <View style={StyleSheet.absoluteFillObject}>
-        <View
-          style={{
-            overflow: "hidden",
-            borderRadius: 12,
-            width: "100%",
-            height: "100%",
-          }}
-        >
-          <Animated.View
-            style={{
-              position: "absolute",
-              top: -50,
-              left: -50,
-              width: "200%",
-              height: "400%",
-              transform: [{ rotate }],
-            }}
-          >
-            <Svg height="100%" width="100%" viewBox="0 0 200 200">
-              <Defs>
-                <SvgGradient id="grad" x1="0" y1="0" x2="1" y2="1">
-                  <Stop
-                    offset="0"
-                    stopColor={hasError ? "#FF0055" : "#00FFFF"}
-                    stopOpacity="1"
-                  />
-                  <Stop
-                    offset="1"
-                    stopColor={hasError ? "#FF0000" : "#FF00FF"}
-                    stopOpacity="1"
-                  />
-                </SvgGradient>
-              </Defs>
-              <Path
-                d="M45.7,-76.2C58.9,-69.3,69.1,-56.4,76.3,-42.2C83.5,-28,87.7,-12.5,85.6,1.9C83.5,16.3,75.1,29.6,65.2,40.8C55.3,52,43.9,61.1,31.2,65.8C18.5,70.5,4.5,70.8,-8.2,68.7C-20.9,66.6,-32.3,62.1,-42.6,54.4C-52.9,46.7,-62.1,35.8,-69.1,22.9C-76.1,10,-80.9,-4.9,-77.8,-18.2C-74.7,-31.5,-63.7,-43.2,-51.4,-50.6C-39.1,-58,-25.5,-61.1,-11.9,-61.6C1.7,-62.1,13.4,-60,25.1,-57.9"
-                fill="url(#grad)"
-                transform="translate(100, 100) scale(1.5)"
-              />
-            </Svg>
-          </Animated.View>
-        </View>
-      </View>
-    );
-  };
-
-  const renderInput = (
-    label: string,
-    value: string,
-    setValue: (text: string) => void,
-    fieldKey: string,
-    placeholder: string,
-    options: any = {}
-  ) => {
-    const isFocused = focusedInput === fieldKey;
-    const hasError = !!errors[fieldKey as keyof typeof errors];
-
-    return (
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>{label}</Text>
-        <View style={styles.inputContainer}>
-          <BlobBackground isFocused={isFocused} hasError={hasError} />
-          {!isFocused && !hasError && (
-            <View style={[StyleSheet.absoluteFill, styles.inactiveBorder]} />
-          )}
-          <View style={styles.innerInputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder={placeholder}
-              placeholderTextColor="#666"
-              value={value}
-              onChangeText={setValue}
-              onFocus={() => setFocusedInput(fieldKey)}
-              onBlur={() => setFocusedInput(null)}
-              autoCapitalize="none"
-              {...options}
-            />
-          </View>
-        </View>
-        {hasError ? (
-          <Text style={styles.errorText}>
-            {errors[fieldKey as keyof typeof errors]}
-          </Text>
-        ) : null}
-      </View>
-    );
+    // Mock reset password logic
+    Alert.alert(t("auth.reset_link_sent"), t("auth.check_email"), [
+      { text: t("ok"), onPress: () => router.back() },
+    ]);
   };
 
   return (
-    <View style={styles.root}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.root}
+    >
       <View style={styles.backgroundLogoContainer} pointerEvents="none">
         <Logo />
       </View>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.container}>
-            <View style={styles.header}>
-              <Text style={styles.title}>Forgot Password</Text>
-              <Text style={styles.subtitle}>
-                Enter your email to reset your password
-              </Text>
-            </View>
+        <View style={styles.logoSection}>
+          <Logo />
+        </View>
 
-            <View style={styles.form}>
-              {renderInput(
-                "Email",
-                email,
-                setEmail,
-                "email",
-                "Enter your email",
-                { keyboardType: "email-address" }
-              )}
+        <View style={styles.formSection}>
+          <Text style={styles.title}>{t("auth.forgot_password")}</Text>
+          <Text style={styles.subtitle}>{t("auth.reset_desc")}</Text>
 
-              <TouchableOpacity
-                onPress={handleResetPassword}
-                activeOpacity={0.8}
-                style={styles.buttonWrapper}
-              >
-                <View style={styles.buttonContainer}>
-                  <View style={styles.buttonBackground}>
-                    <Text style={styles.buttonText}>Reset Password</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-
-              <View style={styles.backLinkContainer}>
-                <TouchableOpacity onPress={() => router.back()}>
-                  <Text style={styles.backLink}>Back to Sign In</Text>
-                </TouchableOpacity>
-              </View>
+          <View style={styles.inputContainer}>
+            <View
+              style={[
+                styles.inputWrapper,
+                isRTL && { flexDirection: "row-reverse" },
+              ]}
+            >
+              <Ionicons
+                name="mail-outline"
+                size={20}
+                color="#00FFFF"
+                style={[
+                  styles.inputIcon,
+                  isRTL ? { marginLeft: 10 } : { marginRight: 10 },
+                ]}
+              />
+              <TextInput
+                style={[styles.input, isRTL && { textAlign: "right" }]}
+                placeholder={t("auth.email")}
+                placeholderTextColor="#666"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
             </View>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+
+          <TouchableOpacity
+            style={styles.resetButtonWrapper}
+            onPress={handleResetPassword}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={["#00FFFF", "#FF00FF"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.resetButton}
+            >
+              <Text style={styles.resetButtonText}>
+                {t("auth.send_reset_link")}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons
+              name={isRTL ? "arrow-forward" : "arrow-back"}
+              size={20}
+              color="#CCCCCC"
+              style={isRTL ? { marginLeft: 8 } : { marginRight: 8 }}
+            />
+            <Text style={styles.backButtonText}>{t("auth.back_to_login")}</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -245,30 +129,28 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
-    opacity: 0.3,
+    opacity: 0.1,
     zIndex: 0,
-    transform: [{ scale: 1.2 }],
+    transform: [{ scale: 1.5 }],
   },
-  scrollContainer: {
+  scrollContent: {
     flexGrow: 1,
-    zIndex: 1,
+    justifyContent: "center",
+    padding: 30,
   },
-  container: {
-    flex: 1,
-    paddingHorizontal: 30,
-    paddingTop: 60,
-    paddingBottom: 40,
-  },
-  header: {
-    marginBottom: 40,
+  logoSection: {
     alignItems: "center",
+    marginBottom: 50,
+  },
+  formSection: {
+    width: "100%",
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "bold",
     color: "#FFFFFF",
-    textAlign: "center",
     marginBottom: 10,
+    textAlign: "center",
     textShadowColor: "rgba(0, 255, 255, 0.5)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
@@ -276,91 +158,60 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: "#CCCCCC",
+    marginBottom: 40,
     textAlign: "center",
-    paddingHorizontal: 20,
-  },
-  form: {
-    width: "100%",
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    marginBottom: 8,
-    fontWeight: "600",
-    letterSpacing: 0.5,
+    lineHeight: 22,
   },
   inputContainer: {
-    borderRadius: 12,
-    overflow: "hidden",
-    position: "relative",
-    padding: 2,
-    backgroundColor: "transparent",
+    marginBottom: 30,
   },
-  inactiveBorder: {
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    borderRadius: 15,
     borderWidth: 1,
-    borderColor: "rgba(0, 255, 255, 0.3)",
-    borderRadius: 12,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    height: 56,
+    paddingHorizontal: 15,
   },
-  innerInputContainer: {
-    backgroundColor: "rgba(5, 5, 16, 0.8)",
-    borderRadius: 10,
-    width: "100%",
+  inputIcon: {
+    marginRight: 10,
   },
   input: {
+    flex: 1,
     color: "#FFFFFF",
     fontSize: 16,
-    padding: 16,
+  },
+  resetButtonWrapper: {
     width: "100%",
-  },
-  errorText: {
-    color: "#FF0055",
-    fontSize: 12,
-    marginTop: 5,
-    marginLeft: 5,
-  },
-  buttonWrapper: {
-    marginTop: 30,
-    shadowColor: "#00FFFF",
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
+    shadowColor: "#FF00FF",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
     elevation: 5,
-    borderRadius: 30,
+    marginBottom: 30,
   },
-  buttonContainer: {
-    borderRadius: 30,
-    padding: 2,
-    overflow: "hidden",
-    backgroundColor: "#00FFFF",
-  },
-  buttonBackground: {
-    backgroundColor: "#050510",
+  resetButton: {
+    height: 56,
     borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
   },
-  buttonText: {
-    color: "#00FFFF",
+  resetButtonText: {
+    color: "#FFFFFF",
     fontSize: 18,
     fontWeight: "bold",
     letterSpacing: 1,
     textTransform: "uppercase",
   },
-  backLinkContainer: {
+  backButton: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: 30,
+    alignItems: "center",
   },
-  backLink: {
-    color: "#00FFFF",
-    fontSize: 14,
-    fontWeight: "bold",
+  backButtonText: {
+    color: "#CCCCCC",
+    fontSize: 16,
   },
 });

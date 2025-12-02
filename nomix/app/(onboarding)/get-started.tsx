@@ -3,9 +3,11 @@ import React from "react";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import Logo from "../../components/Logo";
+import { useLanguage } from "../../context/LanguageContext";
 
 const GetStarted = () => {
   const router = useRouter();
+  const { t } = useLanguage();
 
   return (
     <View style={styles.container}>
@@ -14,15 +16,13 @@ const GetStarted = () => {
       </View>
 
       <View style={styles.contentContainer}>
-        <Text style={styles.title}>Welcome to Nomix</Text>
-        <Text style={styles.subtitle}>
-          Discover and create amazing cocktail recipes.
-        </Text>
+        <Text style={styles.title}>{t("get_started.welcome")}</Text>
+        <Text style={styles.subtitle}>{t("get_started.subtitle")}</Text>
 
         <View style={styles.buttonContainer}>
           {/* Sign Up Button */}
           <TouchableOpacity
-            onPress={() => router.push("/register")}
+            onPress={() => router.push("/(auth)/register")}
             activeOpacity={0.8}
             style={styles.buttonWrapper}
           >
@@ -32,18 +32,22 @@ const GetStarted = () => {
               end={{ x: 1, y: 0 }}
               style={styles.primaryButton}
             >
-              <Text style={styles.primaryButtonText}>Sign Up</Text>
+              <Text style={styles.primaryButtonText}>
+                {t("get_started.sign_up")}
+              </Text>
             </LinearGradient>
           </TouchableOpacity>
 
           {/* Sign In Button */}
           <TouchableOpacity
-            onPress={() => router.push("/login")}
+            onPress={() => router.push("/(auth)/login")}
             activeOpacity={0.8}
             style={styles.buttonWrapper}
           >
             <View style={styles.secondaryButton}>
-              <Text style={styles.secondaryButtonText}>Sign In</Text>
+              <Text style={styles.secondaryButtonText}>
+                {t("get_started.sign_in")}
+              </Text>
             </View>
           </TouchableOpacity>
         </View>
