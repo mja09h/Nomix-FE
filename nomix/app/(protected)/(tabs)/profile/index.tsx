@@ -13,16 +13,19 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Logo from "../../../../components/Logo";
+import { useLanguage } from "../../../../context/LanguageContext";
 
 const Profile = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t, language } = useLanguage();
+  const isRTL = language === "ar";
 
   const handleLogout = () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("logout"), t("logout_confirm"), [
+      { text: t("cancel"), style: "cancel" },
       {
-        text: "Logout",
+        text: t("logout"),
         style: "destructive",
         onPress: () => router.replace("/(auth)/login"),
       },
@@ -30,10 +33,26 @@ const Profile = () => {
   };
 
   const menuItems = [
-    { icon: "person-outline", label: "Edit Profile", route: "/profile/edit" },
-    { icon: "heart-outline", label: "Favorites", route: "/profile/favorites" },
-    { icon: "settings-outline", label: "Settings", route: "/settings" },
-    { icon: "help-circle-outline", label: "Help & Support", route: "/help" },
+    {
+      icon: "person-outline",
+      label: t("edit_profile"),
+      route: "/profile/edit",
+    },
+    {
+      icon: "heart-outline",
+      label: t("favorites"),
+      route: "/profile/favorites",
+    },
+    {
+      icon: "settings-outline",
+      label: t("settings.title"),
+      route: "/profile/settings",
+    },
+    {
+      icon: "help-circle-outline",
+      label: t("help_support"),
+      route: "/profile/help",
+    },
   ];
 
   return (
@@ -74,20 +93,25 @@ const Profile = () => {
           <Text style={styles.userHandle}>@amixer</Text>
 
           {/* Stats Row */}
-          <View style={styles.statsContainer}>
+          <View
+            style={[
+              styles.statsContainer,
+              isRTL && { flexDirection: "row-reverse" },
+            ]}
+          >
             <View style={styles.statItem}>
               <Text style={styles.statNumber}>24</Text>
-              <Text style={styles.statLabel}>Recipes</Text>
+              <Text style={styles.statLabel}>{t("recipes")}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={styles.statNumber}>1.2k</Text>
-              <Text style={styles.statLabel}>Followers</Text>
+              <Text style={styles.statLabel}>{t("followers")}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={styles.statNumber}>850</Text>
-              <Text style={styles.statLabel}>Following</Text>
+              <Text style={styles.statLabel}>{t("following")}</Text>
             </View>
           </View>
         </View>
@@ -97,7 +121,10 @@ const Profile = () => {
           {menuItems.map((item, index) => (
             <TouchableOpacity
               key={index}
-              style={styles.menuItem}
+              style={[
+                styles.menuItem,
+                isRTL && { flexDirection: "row-reverse" },
+              ]}
               activeOpacity={0.7}
               onPress={() => {
                 if (item.route) {
@@ -105,30 +132,59 @@ const Profile = () => {
                 }
               }}
             >
-              <View style={styles.menuItemLeft}>
+              <View
+                style={[
+                  styles.menuItemLeft,
+                  isRTL && { flexDirection: "row-reverse" },
+                ]}
+              >
                 <LinearGradient
                   colors={["rgba(0, 255, 255, 0.1)", "rgba(255, 0, 255, 0.1)"]}
-                  style={styles.iconContainer}
+                  style={[
+                    styles.iconContainer,
+                    isRTL && { marginRight: 0, marginLeft: 15 },
+                  ]}
                 >
                   <Ionicons name={item.icon as any} size={22} color="#00FFFF" />
                 </LinearGradient>
                 <Text style={styles.menuLabel}>{item.label}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#666" />
+              <Ionicons
+                name={isRTL ? "chevron-back" : "chevron-forward"}
+                size={20}
+                color="#666"
+              />
             </TouchableOpacity>
           ))}
 
           {/* Logout Button */}
           <TouchableOpacity
-            style={[styles.menuItem, styles.logoutItem]}
+            style={[
+              styles.menuItem,
+              styles.logoutItem,
+              isRTL && { flexDirection: "row-reverse" },
+            ]}
             activeOpacity={0.7}
             onPress={handleLogout}
           >
-            <View style={styles.menuItemLeft}>
-              <View style={[styles.iconContainer, styles.logoutIconContainer]}>
+            <View
+              style={[
+                styles.menuItemLeft,
+                isRTL && { flexDirection: "row-reverse" },
+              ]}
+            >
+              <View
+                style={[
+                  styles.iconContainer,
+                  styles.logoutIconContainer,
+                  isRTL && { marginRight: 0, marginLeft: 15 },
+                ]}
+              >
                 <Ionicons name="log-out-outline" size={22} color="#FF0055" />
               </View>
-              <Text style={[styles.menuLabel, styles.logoutLabel]}>Logout</Text>
+              <Text style={[styles.menuLabel, styles.logoutLabel]}>
+                {t("logout")}
+              </Text>
             </View>
           </TouchableOpacity>
         </View>
