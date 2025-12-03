@@ -19,6 +19,7 @@ import { logout, getUserById } from "../../../../api/auth";
 import { getImageUrl } from "../../../../api";
 import { useAuth } from "../../../../context/AuthContext";
 import { User } from "../../../../types/User";
+import { getAllRecipes } from "../../../../api/recipes";
 
 const Profile = () => {
   const router = useRouter();
@@ -29,15 +30,32 @@ const Profile = () => {
   const { user, logout: authLogout } = useAuth();
   const [profileData, setProfileData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userRecipeCount, setUserRecipeCount] = useState(0);
 
   const fetchUserData = async () => {
     if (user?._id) {
       setLoading(true);
-      const userData = await getUserById(user._id);
-      if (userData && userData.success) {
-        setProfileData(userData.data);
-      } else {
-        // Fallback or handle error if needed
+      try {
+        // Fetch user profile data
+        const userData = await getUserById(user._id);
+        if (userData && userData.success) {
+          setProfileData(userData.data);
+        } else {
+          setProfileData(user as User);
+        }
+
+        // Fetch recipes to count user's recipes
+        const allRecipes = await getAllRecipes();
+        const userRecipes = allRecipes.filter(
+          (recipe) =>
+            recipe.userId &&
+            (typeof recipe.userId === "string"
+              ? recipe.userId === user._id
+              : recipe.userId._id === user._id)
+        );
+        setUserRecipeCount(userRecipes.length);
+      } catch (error) {
+        console.error("Error fetching user data:", error);
         setProfileData(user as User);
       }
       setLoading(false);
@@ -71,9 +89,31 @@ const Profile = () => {
       route: "/profile/edit",
     },
     {
+      icon: "book-outline",
+      label: "My Recipes",
+      route: "/(protected)/myRecipes",
+      color: "#00FFFF",
+    },
+    {
       icon: "heart-outline",
       label: t("favorites"),
       route: "/profile/favorites",
+    },
+    {
+      icon: "heart",
+      label: "Liked Recipes",
+      route: "/profile/liked-recipes",
+      color: "#FF0055",
+    },
+    {
+      icon: "grid-outline",
+      label: "Categories",
+      route: "/(protected)/categories-manage",
+    },
+    {
+      icon: "leaf-outline",
+      label: "Ingredients",
+      route: "/(protected)/ingredients",
     },
     {
       icon: "settings-outline",
@@ -158,9 +198,7 @@ const Profile = () => {
             ]}
           >
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>
-                {profileData?.recipes?.length || 0}
-              </Text>
+              <Text style={styles.statNumber}>{userRecipeCount}</Text>
               <Text style={styles.statLabel}>{t("recipes")}</Text>
             </View>
             <View style={styles.statDivider} />
@@ -203,13 +241,21 @@ const Profile = () => {
                 ]}
               >
                 <LinearGradient
-                  colors={["rgba(0, 255, 255, 0.1)", "rgba(255, 0, 255, 0.1)"]}
+                  colors={
+                    item.color
+                      ? [`${item.color}20`, `${item.color}10`]
+                      : ["rgba(0, 255, 255, 0.1)", "rgba(255, 0, 255, 0.1)"]
+                  }
                   style={[
                     styles.iconContainer,
                     isRTL && { marginRight: 0, marginLeft: 15 },
                   ]}
                 >
-                  <Ionicons name={item.icon as any} size={22} color="#00FFFF" />
+                  <Ionicons
+                    name={item.icon as any}
+                    size={22}
+                    color={item.color || "#00FFFF"}
+                  />
                 </LinearGradient>
                 <Text style={styles.menuLabel}>{item.label}</Text>
               </View>

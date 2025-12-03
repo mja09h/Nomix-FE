@@ -31,6 +31,18 @@ const _layout = () => {
               options={{ headerShown: false }}
             />
             <Stack.Screen
+              name="(protected)/categories-manage"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="(protected)/ingredients"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="(protected)/myRecipes"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
               name="(auth)/login"
               options={{ headerShown: false }}
             />

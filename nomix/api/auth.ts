@@ -120,4 +120,15 @@ const changePassword = async (id: string, data: any) => {
     }
 };
 
-export { login, register, logout, getAllUsers, updateUser, deleteUser, getUserById, changePassword };
+const toggleFavorite = async (recipeId: string) => {
+    try {
+        const response = await client.post(`/auth/favorites/${recipeId}`);
+        return { success: true, data: response.data.data, message: response.data.message };
+    } catch (error: any) {
+        console.error("Toggle favorite error", error);
+        const errorMessage = error.response?.data?.message || (error as Error).message;
+        return { success: false, error: errorMessage };
+    }
+};
+
+export { login, register, logout, getAllUsers, updateUser, deleteUser, getUserById, changePassword, toggleFavorite };
