@@ -21,7 +21,7 @@ import Logo from "../../components/Logo";
 import { useLanguage } from "../../context/LanguageContext";
 import { generateRecipeWithAI } from "../../api/aiService";
 import { useMutation } from "@tanstack/react-query";
-import client from "../../api/client";
+import client from "../../api";
 
 const AiGenerator = () => {
   const insets = useSafeAreaInsets();

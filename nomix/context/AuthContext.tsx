@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
 import { getToken, setToken, removeToken } from "../api/storage";
-import client from "../api/client";
+import client from "../api";
 import { jwtDecode } from "jwt-decode";
 import { User } from "../types/User"; // Assuming this exists or I'll create/update it
 
