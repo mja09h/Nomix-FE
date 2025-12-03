@@ -1,11 +1,44 @@
-import { StyleSheet } from "react-native";
-import React from "react";
+import { StyleSheet, Platform } from "react-native";
+import React, { useEffect } from "react";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  schedulePushNotification,
+  cancelAllNotifications,
+} from "../../../utils/notifications";
+import { getNotificationsEnabled } from "../../../utils/preferences";
+import * as Device from "expo-device";
 
 const _layout = () => {
   const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    const setupRecurringNotifications = async () => {
+      // Don't run this logic on web or emulators if it causes issues, though the utils guard should handle it.
+      if (!Device.isDevice && Platform.OS !== "web") {
+        // Optional: log that we are skipping recurring setup on simulator
+      }
+
+      const enabled = await getNotificationsEnabled();
+      if (enabled) {
+        // Cancel existing to avoid duplicates
+        await cancelAllNotifications();
+
+        // Schedule new recurring notification every 3 minutes (180 seconds)
+        await schedulePushNotification(
+          "New Recipe Alert!",
+          "Check out this new recipe you might like 🍲",
+          {},
+          { seconds: 180, repeats: true }
+        );
+      } else {
+        await cancelAllNotifications();
+      }
+    };
+
+    setupRecurringNotifications();
+  }, []);
 
   return (
     <Tabs
@@ -34,18 +67,18 @@ const _layout = () => {
       <Tabs.Screen
         name="categories"
         options={{
-          title: "Categories",
+          title: "Recipes",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="grid" size={size} color={color} />
+            <Ionicons name="restaurant" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="recipes"
+        name="users"
         options={{
-          title: "Recipes",
+          title: "Users",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="book" size={size} color={color} />
+            <Ionicons name="people" size={size} color={color} />
           ),
         }}
       />

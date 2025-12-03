@@ -25,6 +25,8 @@ import Logo from "../../components/Logo";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
 import { login as apiLogin } from "../../api/auth";
+import { schedulePushNotification } from "../../utils/notifications";
+import { getNotificationsEnabled } from "../../utils/preferences";
 
 const Login = () => {
   const router = useRouter();
@@ -74,6 +76,16 @@ const Login = () => {
         if (result.success && result.data) {
           const { token } = result.data;
           await login(token);
+
+          // Trigger Notification
+          const enabled = await getNotificationsEnabled();
+          if (enabled) {
+            await schedulePushNotification(
+              "Welcome Back!",
+              "It's great to see you again."
+            );
+          }
+
           router.push("/(protected)/(tabs)/home");
         } else {
           const errorMessage =

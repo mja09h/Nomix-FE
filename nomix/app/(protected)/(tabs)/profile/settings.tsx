@@ -10,25 +10,78 @@ import {
   Pressable,
   TouchableWithoutFeedback,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Logo from "../../../../components/Logo";
 import { useLanguage } from "../../../../context/LanguageContext";
+import {
+  getNotificationsEnabled,
+  setNotificationsEnabledPref,
+} from "../../../../utils/preferences";
+import {
+  registerForPushNotificationsAsync,
+  schedulePushNotification,
+  cancelAllNotifications,
+} from "../../../../utils/notifications";
 
 const Settings = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t, language, setLanguage } = useLanguage();
 
-  // Mock State
+  // State
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [soundsEnabled, setSoundsEnabled] = useState(true);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+
+  useEffect(() => {
+    const loadPreferences = async () => {
+      const enabled = await getNotificationsEnabled();
+      setNotificationsEnabled(enabled);
+    };
+    loadPreferences();
+  }, []);
+
+  const toggleNotifications = async () => {
+    const newValue = !notificationsEnabled;
+    setNotificationsEnabled(newValue);
+    await setNotificationsEnabledPref(newValue);
+    if (newValue) {
+      await registerForPushNotificationsAsync();
+      await schedulePushNotification(
+        "New Recipe Alert!",
+        "Check out this new recipe you might like 🍲",
+        {},
+        { seconds: 180, repeats: true }
+      );
+    } else {
+      await cancelAllNotifications();
+    }
+  };
+
+  const sendRandomNotification = async () => {
+    if (!notificationsEnabled) {
+      Alert.alert(
+        "Notifications Disabled",
+        "Please enable notifications to test them."
+      );
+      return;
+    }
+    const messages = [
+      "Don't forget to check your recipes!",
+      "New features are available!",
+      "Have you cooked something today?",
+      "Your profile looks great!",
+      "Time for a snack?",
+    ];
+    const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+    await schedulePushNotification("Nomix Random", randomMessage);
+  };
 
   const handleLanguageChange = (lang: "en" | "ar") => {
     setLanguage(lang);
@@ -187,7 +240,12 @@ const Settings = () => {
               label: t("push_notifications"),
               type: "switch",
               value: notificationsEnabled,
-              onPress: () => setNotificationsEnabled(!notificationsEnabled),
+              onPress: toggleNotifications,
+            })}
+            {renderSettingItem({
+              icon: "notifications-circle-outline",
+              label: "Send Random Notification",
+              onPress: sendRandomNotification,
             })}
             {renderSettingItem({
               icon: "volume-high-outline",
