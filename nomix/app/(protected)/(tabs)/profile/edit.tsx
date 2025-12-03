@@ -9,49 +9,131 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  ActivityIndicator,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Logo from "../../../../components/Logo";
+import { useAuth } from "../../../../context/AuthContext";
+import { getUserById, updateUser } from "../../../../api/auth";
+import { getImageUrl } from "../../../../api";
+import * as ImagePicker from "expo-image-picker";
 
 const EditProfile = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
 
-  // Mock initial data
-  const [username, setUsername] = useState("Alex Mixer");
-  const [email, setEmail] = useState("alex@nomix.com");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [bio, setBio] = useState("");
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  const [profilePictureFile, setProfilePictureFile] = useState<{
+    uri: string;
+    name: string;
+    type: string;
+  } | null>(null);
+
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (user?._id) {
+        setIsFetching(true);
+        const result = await getUserById(user._id);
+        if (result && result.success) {
+          const userData = result.data;
+          setUsername(userData.username || "");
+          setName(userData.name || "");
+          setEmail(userData.email || "");
+          setBio(userData.bio || "");
+          setProfilePicture(userData.profilePicture || null);
+        }
+        setIsFetching(false);
+      }
+    };
+    fetchUserData();
+  }, [user?._id]);
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: "images",
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.4,
+      base64: false,
+    });
+
+    if (!result.canceled) {
+      const asset = result.assets[0];
+      const uri = asset.uri;
+      const type = asset.mimeType || "image/jpeg";
+      const name =
+        uri.split("/").pop() || `profile.${type.split("/")[1] || "jpg"}`;
+
+      setProfilePicture(uri);
+      setProfilePictureFile({ uri, name, type });
+    }
+  };
 
   const handleSave = async () => {
-    if (!password) {
-      Alert.alert(
-        "Authentication Required",
-        "Please enter your password to save changes."
-      );
-      return;
-    }
-
-    if (!username || !email) {
+    if (!username.trim() || !email.trim()) {
       Alert.alert("Error", "Username and Email cannot be empty.");
       return;
     }
 
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      if (user?._id) {
+        const formData = new FormData();
+        formData.append("username", username);
+        formData.append("name", name);
+        formData.append("email", email);
+        formData.append("bio", bio);
+        if (profilePictureFile) {
+          formData.append("profilePicture", {
+            uri: profilePictureFile.uri,
+            name: profilePictureFile.name,
+            type: profilePictureFile.type,
+          } as any);
+        }
+
+        const result = await updateUser(user._id, formData);
+
+        if (result.success) {
+          Alert.alert("Success", "Profile updated successfully!", [
+            { text: "OK", onPress: () => router.back() },
+          ]);
+        } else {
+          Alert.alert("Error", result.error || "Failed to update profile.");
+        }
+      }
+    } catch (error) {
+      console.error("Update error", error);
+      Alert.alert("Error", "An unexpected error occurred.");
+    } finally {
       setIsLoading(false);
-      Alert.alert("Success", "Profile updated successfully!", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
-    }, 1500);
+    }
   };
+
+  if (isFetching) {
+    return (
+      <View
+        style={[
+          styles.root,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
+        <ActivityIndicator size="large" color="#00FFFF" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
@@ -95,13 +177,19 @@ const EditProfile = () => {
                 <View style={styles.avatarInner}>
                   <Image
                     source={{
-                      uri: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+                      uri:
+                        getImageUrl(profilePicture) ||
+                        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
                     }}
                     style={styles.avatarImage}
                   />
                 </View>
               </LinearGradient>
-              <TouchableOpacity style={styles.cameraButton} activeOpacity={0.8}>
+              <TouchableOpacity
+                style={styles.cameraButton}
+                activeOpacity={0.8}
+                onPress={pickImage}
+              >
                 <LinearGradient
                   colors={["#00FFFF", "#0088FF"]}
                   style={styles.cameraGradient}
@@ -116,10 +204,30 @@ const EditProfile = () => {
           {/* Form Section */}
           <View style={styles.formContainer}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Username</Text>
+              <Text style={styles.label}>Name</Text>
               <View style={styles.inputContainer}>
                 <Ionicons
                   name="person-outline"
+                  size={20}
+                  color="#666"
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Full Name"
+                  placeholderTextColor="#666"
+                  autoCapitalize="words"
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Username</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons
+                  name="at-outline"
                   size={20}
                   color="#666"
                   style={styles.inputIcon}
@@ -156,41 +264,37 @@ const EditProfile = () => {
               </View>
             </View>
 
-            <View style={styles.divider} />
-
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: "#FF00FF" }]}>
-                Confirm Password to Save
-              </Text>
-              <View style={[styles.inputContainer, styles.passwordContainer]}>
+              <Text style={styles.label}>Bio</Text>
+              <View
+                style={[
+                  styles.inputContainer,
+                  {
+                    height: 100,
+                    alignItems: "flex-start",
+                    paddingVertical: 10,
+                  },
+                ]}
+              >
                 <Ionicons
-                  name="lock-closed-outline"
+                  name="text-outline"
                   size={20}
-                  color="#FF00FF"
-                  style={styles.inputIcon}
+                  color="#666"
+                  style={[styles.inputIcon, { marginTop: 4 }]}
                 />
                 <TextInput
-                  style={styles.input}
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Enter your password"
+                  style={[
+                    styles.input,
+                    { height: "100%", textAlignVertical: "top" },
+                  ]}
+                  value={bio}
+                  onChangeText={setBio}
+                  placeholder="Tell us about yourself..."
                   placeholderTextColor="#666"
-                  secureTextEntry={!showPassword}
+                  multiline
+                  numberOfLines={4}
                 />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeIcon}
-                >
-                  <Ionicons
-                    name={showPassword ? "eye-off-outline" : "eye-outline"}
-                    size={20}
-                    color="#666"
-                  />
-                </TouchableOpacity>
               </View>
-              <Text style={styles.helperText}>
-                Required to verify your identity
-              </Text>
             </View>
 
             <TouchableOpacity

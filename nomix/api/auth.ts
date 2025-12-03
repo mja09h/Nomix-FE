@@ -20,12 +20,14 @@ const login = async (identifier: string, password: string) => {
 
 const register = async (
     username: string,
+    name: string,
     email: string,
     password: string
 ) => {
     try {
         const response = await client.post("/auth/", {
             username,
+            name,
             email,
             password,
         });
@@ -63,11 +65,19 @@ const getAllUsers = async () => {
 
 const updateUser = async (id: string, data: any) => {
     try {
-        const response = await client.put(`/auth/${id}`, data);
-        return response.data;
-    } catch (error) {
+        const response = await client.put(`/auth/${id}`, data, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+            transformRequest: (data, headers) => {
+                return data; // Do not stringify FormData
+            },
+        });
+        return { success: true, data: response.data };
+    } catch (error: any) {
         console.error("Update user error", error);
-        return null;
+        const errorMessage = error.response?.data?.message || (error as Error).message;
+        return { success: false, error: errorMessage };
     }
 };
 
@@ -99,4 +109,15 @@ const getUserById = async (id: string) => {
     }
 };
 
-export { login, register, logout, getAllUsers, updateUser, deleteUser, getUserById };
+const changePassword = async (id: string, data: any) => {
+    try {
+        const response = await client.put(`/auth/${id}/change-password`, data);
+        return { success: true, data: response.data };
+    } catch (error: any) {
+        console.error("Change password error", error);
+        const errorMessage = error.response?.data?.message || (error as Error).message;
+        return { success: false, error: errorMessage };
+    }
+};
+
+export { login, register, logout, getAllUsers, updateUser, deleteUser, getUserById, changePassword };

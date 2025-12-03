@@ -74,13 +74,7 @@ const Login = () => {
         if (result.success && result.data) {
           const { token } = result.data;
           await login(token);
-
-          Alert.alert("Success", "Login successful!", [
-            {
-              text: "OK",
-              onPress: () => router.push("/(protected)/(tabs)/home"),
-            },
-          ]);
+          router.push("/(protected)/(tabs)/home");
         } else {
           const errorMessage =
             result.error || "Login failed. Please check your credentials.";

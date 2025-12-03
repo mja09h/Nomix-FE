@@ -1,9 +1,17 @@
 export interface User {
-    _id?: string;
-    id?: string;
+    _id: string;
     username: string;
     email: string;
-    image?: string;
+    name?: string;
+    profilePicture?: string;
+    bio?: string;
+    recipes?: string[]; // Array of ObjectIds
+    favorites?: string[];
+    followers?: string[];
+    following?: string[];
+    isActive?: boolean;
+    createdAt?: Date;
+    updatedAt?: Date;
 }
 
 export default User;

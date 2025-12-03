@@ -16,12 +16,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Logo from "../../../../components/Logo";
 import { useLanguage } from "../../../../context/LanguageContext";
+import { useAuth } from "../../../../context/AuthContext";
+import { changePassword } from "../../../../api/auth";
 
 const ChangePassword = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t, language } = useLanguage();
   const isRTL = language === "ar";
+  const { user } = useAuth();
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -31,7 +34,7 @@ const ChangePassword = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
       Alert.alert(t("error"), t("fill_all_fields"));
       return;
@@ -49,13 +52,31 @@ const ChangePassword = () => {
 
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      if (user?._id) {
+        const result = await changePassword(user._id, {
+          oldPassword: currentPassword,
+          newPassword: newPassword,
+        });
+
+        if (result.success) {
+          Alert.alert(
+            t("success"),
+            result.data.message || t("password_updated"),
+            [{ text: t("ok"), onPress: () => router.back() }]
+          );
+        } else {
+          Alert.alert(t("error"), result.error || "Failed to update password");
+        }
+      } else {
+        Alert.alert(t("error"), "User not found");
+      }
+    } catch (error) {
+      console.error("Change password error", error);
+      Alert.alert(t("error"), "An unexpected error occurred");
+    } finally {
       setIsLoading(false);
-      Alert.alert(t("success"), t("password_updated"), [
-        { text: t("ok"), onPress: () => router.back() },
-      ]);
-    }, 1500);
+    }
   };
 
   const renderPasswordInput = (

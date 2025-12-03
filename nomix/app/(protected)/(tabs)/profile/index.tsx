@@ -6,15 +6,19 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
+  ActivityIndicator,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Logo from "../../../../components/Logo";
 import { useLanguage } from "../../../../context/LanguageContext";
-import { logout } from "../../../../api/auth";
+import { logout, getUserById } from "../../../../api/auth";
+import { getImageUrl } from "../../../../api";
+import { useAuth } from "../../../../context/AuthContext";
+import { User } from "../../../../types/User";
 
 const Profile = () => {
   const router = useRouter();
@@ -22,6 +26,29 @@ const Profile = () => {
   const { t, language } = useLanguage();
   const isRTL = language === "ar";
   const [logoutVisible, setLogoutVisible] = useState(false);
+  const { user, logout: authLogout } = useAuth();
+  const [profileData, setProfileData] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchUserData = async () => {
+    if (user?._id) {
+      setLoading(true);
+      const userData = await getUserById(user._id);
+      if (userData && userData.success) {
+        setProfileData(userData.data);
+      } else {
+        // Fallback or handle error if needed
+        setProfileData(user as User);
+      }
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchUserData();
+    }, [user?._id])
+  );
 
   const handleLogout = () => {
     setLogoutVisible(true);
@@ -29,7 +56,7 @@ const Profile = () => {
 
   const confirmLogout = async () => {
     setLogoutVisible(false);
-    await logout();
+    await authLogout();
     router.replace("/(auth)/login");
   };
 
@@ -60,6 +87,25 @@ const Profile = () => {
     },
   ];
 
+  if (loading && !profileData) {
+    return (
+      <View
+        style={[
+          styles.root,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
+        <ActivityIndicator size="large" color="#00FFFF" />
+      </View>
+    );
+  }
+
+  const defaultImage =
+    "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80"; // You can replace this with a local asset if preferred
+  const displayImage = getImageUrl(profileData?.profilePicture) || defaultImage;
+  const displayName = profileData?.name || profileData?.username || "User";
+  const displayHandle = `@${profileData?.username || "user"}`;
+
   return (
     <View style={styles.root}>
       {/* Background Logo Animation */}
@@ -85,17 +131,24 @@ const Profile = () => {
             >
               <View style={styles.avatarInner}>
                 <Image
-                  source={{
-                    uri: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
-                  }}
+                  source={{ uri: displayImage }}
                   style={styles.avatarImage}
+                  onError={(e) =>
+                    console.error(
+                      "Profile Image Load Error:",
+                      e.nativeEvent.error
+                    )
+                  }
                 />
               </View>
             </LinearGradient>
             <View style={styles.statusBadge} />
           </View>
-          <Text style={styles.userName}>Alex Mixer</Text>
-          <Text style={styles.userHandle}>@amixer</Text>
+          <Text style={styles.userName}>{displayName}</Text>
+          <Text style={styles.userHandle}>{displayHandle}</Text>
+          {profileData?.bio && (
+            <Text style={styles.userBio}>{profileData.bio}</Text>
+          )}
 
           {/* Stats Row */}
           <View
@@ -105,17 +158,23 @@ const Profile = () => {
             ]}
           >
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>24</Text>
+              <Text style={styles.statNumber}>
+                {profileData?.recipes?.length || 0}
+              </Text>
               <Text style={styles.statLabel}>{t("recipes")}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>1.2k</Text>
+              <Text style={styles.statNumber}>
+                {profileData?.followers?.length || 0}
+              </Text>
               <Text style={styles.statLabel}>{t("followers")}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>850</Text>
+              <Text style={styles.statNumber}>
+                {profileData?.following?.length || 0}
+              </Text>
               <Text style={styles.statLabel}>{t("following")}</Text>
             </View>
           </View>
@@ -316,6 +375,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#CCCCCC",
     marginBottom: 20,
+  },
+  userBio: {
+    fontSize: 14,
+    color: "#AAAAAA",
+    textAlign: "center",
+    marginBottom: 20,
+    paddingHorizontal: 20,
+    lineHeight: 20,
   },
   statsContainer: {
     flexDirection: "row",
