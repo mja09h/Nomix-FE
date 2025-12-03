@@ -14,7 +14,6 @@ const _layout = () => {
         <QueryClientProvider client={queryClient}>
           <Stack>
             <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="get-started" options={{ headerShown: false }} />
             <Stack.Screen
               name="(protected)/(tabs)"
               options={{ headerShown: false }}

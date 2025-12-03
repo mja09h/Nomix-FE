@@ -1,11 +1,38 @@
-import { StyleSheet, View, Text, TouchableOpacity } from "react-native";
-import React from "react";
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+} from "react-native";
+import React, { useEffect } from "react";
 import Logo from "../components/Logo";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import { useAuth } from "../context/AuthContext";
 
 const index = () => {
   const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace("/(protected)/(tabs)/home");
+    }
+  }, [isLoading, isAuthenticated]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <Logo />
+        <ActivityIndicator
+          size="large"
+          color="#00FFFF"
+          style={{ marginTop: 50 }}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

@@ -25,11 +25,15 @@ import Logo from "../../components/Logo";
 import { Ionicons } from "@expo/vector-icons";
 import { register } from "../../api/auth";
 
+import { useAuth } from "../../context/AuthContext";
+
 const Register = () => {
   const router = useRouter();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -39,6 +43,7 @@ const Register = () => {
 
   const [errors, setErrors] = useState({
     username: "",
+    name: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -56,6 +61,7 @@ const Register = () => {
     let valid = true;
     let newErrors = {
       username: "",
+      name: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -64,6 +70,12 @@ const Register = () => {
     // Username validation
     if (!username.trim()) {
       newErrors.username = "Username is required";
+      valid = false;
+    }
+
+    // Name validation
+    if (!name.trim()) {
+      newErrors.name = "Name is required";
       valid = false;
     }
 
@@ -99,12 +111,13 @@ const Register = () => {
     if (valid) {
       setIsLoading(true);
       try {
-        const result = await register(username, email, password);
+        const result = await register(username, name, email, password);
 
-        if (result.success) {
-          Alert.alert("Success", "Registration successful! Please log in.", [
-            { text: "OK", onPress: () => router.push("/(auth)/login") },
-          ]);
+        if (result.success && result.data) {
+          // Auto-login: Use the token from registration response
+          const { token } = result.data;
+          await login(token);
+          router.push("/(protected)/(tabs)/home");
         } else {
           Alert.alert("Error", result.error || "Registration failed.");
         }
@@ -283,6 +296,13 @@ const Register = () => {
             </View>
 
             <View style={styles.form}>
+              {renderInput(
+                "Name",
+                name,
+                setName,
+                "name",
+                "Enter your full name"
+              )}
               {renderInput(
                 "Username",
                 username,

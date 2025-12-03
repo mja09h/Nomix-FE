@@ -19,7 +19,7 @@ import { useRouter } from "expo-router";
 import Logo from "../../../../components/Logo";
 import { useLanguage } from "../../../../context/LanguageContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import client from "../../../../api/client";
+import client from "../../../../api";
 import { Category } from "../../../../types/Category";
 
 const { width } = Dimensions.get("window");

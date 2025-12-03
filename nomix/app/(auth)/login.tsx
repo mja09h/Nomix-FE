@@ -24,7 +24,7 @@ import Svg, {
 import Logo from "../../components/Logo";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
-import client from "../../api/client";
+import { login as apiLogin } from "../../api/auth";
 
 const Login = () => {
   const router = useRouter();
@@ -54,9 +54,6 @@ const Login = () => {
       password: "",
     };
 
-    router.push("/(protected)/(tabs)/home")
-    return;
-
     if (!identifier.trim()) {
       newErrors.identifier = "Email or Username is required";
       valid = false;
@@ -72,26 +69,20 @@ const Login = () => {
     if (valid) {
       setIsLoading(true);
       try {
-        const response = await client.post("/auth/login", {
-          username: identifier,
-          password: password,
-        });
+        const result = await apiLogin(identifier, password);
 
-        const { token } = response.data;
-        await login(token);
-
-        Alert.alert("Success", "Login successful!", [
-          {
-            text: "OK",
-            onPress: () => router.push("/(protected)/(tabs)/home"),
-          },
-        ]);
+        if (result.success && result.data) {
+          const { token } = result.data;
+          await login(token);
+          router.push("/(protected)/(tabs)/home");
+        } else {
+          const errorMessage =
+            result.error || "Login failed. Please check your credentials.";
+          Alert.alert("Error", errorMessage);
+        }
       } catch (error: any) {
         console.error("Login error", error);
-        const errorMessage =
-          error.response?.data?.message ||
-          "Login failed. Please check your credentials.";
-        Alert.alert("Error", errorMessage);
+        Alert.alert("Error", "An unexpected error occurred.");
       } finally {
         setIsLoading(false);
       }
