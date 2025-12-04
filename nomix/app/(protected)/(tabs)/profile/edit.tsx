@@ -10,8 +10,11 @@ import {
   Platform,
   Image,
   ActivityIndicator,
+  Modal,
+  Animated,
+  Easing,
 } from "react-native";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -40,6 +43,14 @@ const EditProfile = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  // Animation refs for success modal
+  const scaleAnim = useRef(new Animated.Value(0.5)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const successScale = useRef(new Animated.Value(0)).current;
+  const checkRotate = useRef(new Animated.Value(0)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -81,6 +92,85 @@ const EditProfile = () => {
     }
   };
 
+  const showSuccess = () => {
+    setShowSuccessModal(true);
+
+    // Reset animations
+    scaleAnim.setValue(0.5);
+    opacityAnim.setValue(0);
+    successScale.setValue(0);
+    checkRotate.setValue(0);
+    glowAnim.setValue(0);
+
+    // Animate modal appearance
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      // Then animate success icon
+      Animated.parallel([
+        Animated.spring(successScale, {
+          toValue: 1,
+          friction: 5,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+        Animated.timing(checkRotate, {
+          toValue: 1,
+          duration: 600,
+          easing: Easing.out(Easing.back(1.5)),
+          useNativeDriver: true,
+        }),
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(glowAnim, {
+              toValue: 1,
+              duration: 1000,
+              useNativeDriver: true,
+            }),
+            Animated.timing(glowAnim, {
+              toValue: 0,
+              duration: 1000,
+              useNativeDriver: true,
+            }),
+          ])
+        ),
+      ]).start();
+    });
+
+    // Auto close after 2.5 seconds
+    setTimeout(() => {
+      handleCloseSuccessModal();
+    }, 2500);
+  };
+
+  const handleCloseSuccessModal = () => {
+    Animated.parallel([
+      Animated.timing(scaleAnim, {
+        toValue: 0.5,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowSuccessModal(false);
+      router.back();
+    });
+  };
+
   const handleSave = async () => {
     if (!username.trim() || !email.trim()) {
       Alert.alert("Error", "Username and Email cannot be empty.");
@@ -107,9 +197,7 @@ const EditProfile = () => {
         const result = await updateUser(user._id, formData);
 
         if (result.success) {
-          Alert.alert("Success", "Profile updated successfully!", [
-            { text: "OK", onPress: () => router.back() },
-          ]);
+          showSuccess();
         } else {
           Alert.alert("Error", result.error || "Failed to update profile.");
         }
@@ -316,6 +404,98 @@ const EditProfile = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Success Modal */}
+      <Modal
+        visible={showSuccessModal}
+        transparent
+        animationType="none"
+        onRequestClose={handleCloseSuccessModal}
+      >
+        <View style={styles.modalOverlay}>
+          <Animated.View
+            style={[
+              styles.successModalContainer,
+              {
+                transform: [{ scale: scaleAnim }],
+                opacity: opacityAnim,
+              },
+            ]}
+          >
+            {/* Decorative background elements */}
+            <View style={styles.modalDecoration}>
+              <LinearGradient
+                colors={["rgba(0, 255, 255, 0.1)", "transparent"]}
+                style={styles.decorativeGlow}
+              />
+            </View>
+
+            {/* Success Icon */}
+            <Animated.View
+              style={[
+                styles.successIconContainer,
+                {
+                  transform: [
+                    { scale: successScale },
+                    {
+                      rotate: checkRotate.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ["0deg", "360deg"],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <LinearGradient
+                colors={["#00FFFF", "#00FF88"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.successIconGradient}
+              >
+                <Ionicons name="checkmark" size={48} color="#000000" />
+              </LinearGradient>
+            </Animated.View>
+
+            {/* Success Text */}
+            <Text style={styles.successTitle}>Profile Updated!</Text>
+            <Text style={styles.successMessage}>
+              Your changes have been saved successfully.
+            </Text>
+
+            {/* Animated progress bar */}
+            <View style={styles.progressBarContainer}>
+              <Animated.View
+                style={[
+                  styles.progressBar,
+                  {
+                    opacity: glowAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.5, 1],
+                    }),
+                  },
+                ]}
+              >
+                <LinearGradient
+                  colors={["#00FFFF", "#FF00FF"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.progressGradient}
+                />
+              </Animated.View>
+            </View>
+
+            {/* Close button */}
+            <TouchableOpacity
+              style={styles.closeSuccessButton}
+              onPress={handleCloseSuccessModal}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.closeSuccessButtonText}>Done</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -476,5 +656,95 @@ const styles = StyleSheet.create({
     color: "#000000",
     fontSize: 18,
     fontWeight: "bold",
+  },
+  // Success Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  successModalContainer: {
+    width: "100%",
+    maxWidth: 340,
+    backgroundColor: "#0D0D1A",
+    borderRadius: 24,
+    padding: 32,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0, 255, 255, 0.2)",
+    overflow: "hidden",
+  },
+  modalDecoration: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 150,
+  },
+  decorativeGlow: {
+    flex: 1,
+    borderRadius: 24,
+  },
+  successIconContainer: {
+    marginBottom: 24,
+    shadowColor: "#00FFFF",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  successIconGradient: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  successTitle: {
+    color: "#FFFFFF",
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 8,
+    textAlign: "center",
+    textShadowColor: "rgba(0, 255, 255, 0.5)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+  },
+  successMessage: {
+    color: "rgba(255, 255, 255, 0.7)",
+    fontSize: 15,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  progressBarContainer: {
+    width: "100%",
+    height: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 2,
+    marginBottom: 24,
+    overflow: "hidden",
+  },
+  progressBar: {
+    flex: 1,
+  },
+  progressGradient: {
+    flex: 1,
+    borderRadius: 2,
+  },
+  closeSuccessButton: {
+    backgroundColor: "rgba(0, 255, 255, 0.15)",
+    paddingHorizontal: 40,
+    paddingVertical: 14,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: "rgba(0, 255, 255, 0.3)",
+  },
+  closeSuccessButtonText: {
+    color: "#00FFFF",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
