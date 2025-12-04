@@ -131,4 +131,104 @@ const toggleFavorite = async (recipeId: string) => {
     }
 };
 
-export { login, register, logout, getAllUsers, updateUser, deleteUser, getUserById, changePassword, toggleFavorite };
+const toggleFollow = async (userId: string) => {
+    try {
+        const response = await client.post(`/auth/follow/${userId}`);
+        return { success: true, data: response.data.data, message: response.data.message };
+    } catch (error: any) {
+        console.error("Toggle follow error", error);
+        const errorMessage = error.response?.data?.message || (error as Error).message;
+        return { success: false, error: errorMessage };
+    }
+};
+
+// Admin functions
+const toggleUserActive = async (userId: string, isActive: boolean) => {
+    try {
+        const response = await client.put(`/auth/${userId}/active`, { isActive });
+        return { success: true, data: response.data.data, message: response.data.message };
+    } catch (error: any) {
+        console.error("Toggle user active error", error);
+        const errorMessage = error.response?.data?.message || (error as Error).message;
+        return { success: false, error: errorMessage };
+    }
+};
+
+const toggleUserAdmin = async (userId: string, isAdmin: boolean) => {
+    try {
+        const response = await client.put(`/auth/${userId}/admin`, { isAdmin });
+        return { success: true, data: response.data.data, message: response.data.message };
+    } catch (error: any) {
+        console.error("Toggle user admin error", error);
+        const errorMessage = error.response?.data?.message || (error as Error).message;
+        return { success: false, error: errorMessage };
+    }
+};
+
+const banUser = async (userId: string, duration: number, unit: "hours" | "days", reason?: string) => {
+    try {
+        const response = await client.post(`/auth/${userId}/ban`, { duration, unit, reason });
+        return { success: true, data: response.data.data, message: response.data.message };
+    } catch (error: any) {
+        console.error("Ban user error", error);
+        const errorMessage = error.response?.data?.message || (error as Error).message;
+        return { success: false, error: errorMessage };
+    }
+};
+
+const unbanUser = async (userId: string) => {
+    try {
+        const response = await client.post(`/auth/${userId}/unban`);
+        return { success: true, data: response.data.data, message: response.data.message };
+    } catch (error: any) {
+        console.error("Unban user error", error);
+        const errorMessage = error.response?.data?.message || (error as Error).message;
+        return { success: false, error: errorMessage };
+    }
+};
+
+const getReportsForUser = async (userId: string) => {
+    try {
+        const response = await client.get(`/auth/${userId}/reports`);
+        return { success: true, data: response.data.data };
+    } catch (error: any) {
+        console.error("Get reports for user error", error);
+        const errorMessage = error.response?.data?.message || (error as Error).message;
+        return { success: false, error: errorMessage };
+    }
+};
+
+// Admin endpoint to get all users with filters
+const getAllUsersAdmin = async (status?: "active" | "inactive", banned?: boolean) => {
+    try {
+        const params: any = {};
+        if (status) params.status = status;
+        if (banned !== undefined) params.banned = banned.toString();
+
+        const response = await client.get("/auth/admin/all", { params });
+        return { success: true, data: response.data.data, total: response.data.total };
+    } catch (error: any) {
+        console.error("Get all users admin error", error);
+        const errorMessage = error.response?.data?.message || (error as Error).message;
+        return { success: false, error: errorMessage };
+    }
+};
+
+export {
+    login,
+    register,
+    logout,
+    getAllUsers,
+    getAllUsersAdmin,
+    updateUser,
+    deleteUser,
+    getUserById,
+    changePassword,
+    toggleFavorite,
+    toggleFollow,
+    toggleUserActive,
+    toggleUserAdmin,
+    banUser,
+    unbanUser,
+    getReportsForUser
+};

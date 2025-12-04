@@ -6,8 +6,8 @@ import {
   Image,
   TouchableOpacity,
   ActivityIndicator,
-  FlatList,
   RefreshControl,
+  Alert,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -15,24 +15,32 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLanguage } from "../../../../context/LanguageContext";
-import { getUserById } from "../../../../api/auth";
+import { useAuth } from "../../../../context/AuthContext";
+import { getUserById, toggleFollow } from "../../../../api/auth";
 import { getAllRecipes } from "../../../../api/recipes";
 import { getImageUrl } from "../../../../api/index";
 import { User } from "../../../../types/User";
 import { Recipe } from "../../../../types/Recipe";
 import Logo from "../../../../components/Logo";
+import ReportModal from "../../../../components/ReportModal";
 
 const UserProfile = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { language } = useLanguage();
+  const { user: currentUser } = useAuth();
   const isRTL = language === "ar";
 
   const [user, setUser] = useState<User | null>(null);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+
+  const isOwnProfile = currentUser?._id === id;
 
   const fetchUserData = async () => {
     if (!id) return;
@@ -57,6 +65,17 @@ const UserProfile = () => {
             : recipe.userId._id === id)
       );
       setRecipes(userRecipes);
+
+      // Check if current user is following this user
+      if (currentUser?._id && currentUser._id !== id) {
+        const currentUserResponse = await getUserById(currentUser._id);
+        if (currentUserResponse?.data?.following) {
+          const followingIds = currentUserResponse.data.following.map(
+            (f: any) => (typeof f === "string" ? f : f._id)
+          );
+          setIsFollowing(followingIds.includes(id));
+        }
+      }
     } catch (error) {
       console.error("Failed to load user data", error);
     } finally {
@@ -67,11 +86,37 @@ const UserProfile = () => {
 
   useEffect(() => {
     fetchUserData();
-  }, [id]);
+  }, [id, currentUser?._id]);
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchUserData();
+  };
+
+  const handleToggleFollow = async () => {
+    if (!id || followLoading || isOwnProfile) return;
+    setFollowLoading(true);
+    try {
+      const result = await toggleFollow(id);
+      if (result.success) {
+        setIsFollowing(!isFollowing);
+        // Update follower count locally
+        if (user) {
+          const newFollowersCount = isFollowing
+            ? (user.followers?.length || 1) - 1
+            : (user.followers?.length || 0) + 1;
+          setUser({
+            ...user,
+            followers: Array(newFollowersCount).fill(""),
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to toggle follow", error);
+      Alert.alert("Error", "Failed to update follow status. Please try again.");
+    } finally {
+      setFollowLoading(false);
+    }
   };
 
   if (loading) {
@@ -98,50 +143,6 @@ const UserProfile = () => {
     getImageUrl(user.profilePicture) ||
     "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80";
 
-  const renderRecipeItem = ({ item }: { item: Recipe }) => {
-    let description = "";
-    if (Array.isArray(item.instructions) && item.instructions.length > 0) {
-      const firstInstruction = item.instructions[0];
-      description =
-        typeof firstInstruction === "string" ? firstInstruction : "";
-    }
-
-    return (
-      <TouchableOpacity
-        activeOpacity={0.9}
-        style={styles.recipeCard}
-        onPress={() => router.push(`/categories/${item._id}`)}
-      >
-        <Image
-          source={{
-            uri: getImageUrl(item.image) || "https://via.placeholder.com/150",
-          }}
-          style={styles.recipeImage}
-        />
-        <LinearGradient
-          colors={["transparent", "rgba(0,0,0,0.8)"]}
-          style={styles.recipeGradient}
-        >
-          <Text style={styles.recipeName} numberOfLines={1}>
-            {String(item.name || "")}
-          </Text>
-          <View style={styles.recipeStats}>
-            <View style={styles.recipeStat}>
-              <Ionicons name="heart" size={12} color="#FF0055" />
-              <Text style={styles.recipeStatText}>
-                {item.likes?.length || 0}
-              </Text>
-            </View>
-            <View style={styles.recipeStat}>
-              <Ionicons name="eye" size={12} color="#888" />
-              <Text style={styles.recipeStatText}>{item.views || 0}</Text>
-            </View>
-          </View>
-        </LinearGradient>
-      </TouchableOpacity>
-    );
-  };
-
   return (
     <View style={styles.root}>
       {/* Background Logo */}
@@ -162,7 +163,16 @@ const UserProfile = () => {
           />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
-        <View style={{ width: 40 }} />
+        {!isOwnProfile ? (
+          <TouchableOpacity
+            style={styles.reportButton}
+            onPress={() => setShowReportModal(true)}
+          >
+            <Ionicons name="flag" size={20} color="#FF0055" />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 40 }} />
+        )}
       </View>
 
       <ScrollView
@@ -195,6 +205,42 @@ const UserProfile = () => {
           <Text style={styles.userHandle}>@{user.username}</Text>
 
           {user.bio && <Text style={styles.userBio}>{user.bio}</Text>}
+
+          {/* Follow Button */}
+          {!isOwnProfile && (
+            <TouchableOpacity
+              style={[
+                styles.followButton,
+                isFollowing && styles.followingButton,
+              ]}
+              onPress={handleToggleFollow}
+              disabled={followLoading}
+              activeOpacity={0.8}
+            >
+              {followLoading ? (
+                <ActivityIndicator
+                  size="small"
+                  color={isFollowing ? "#00FFFF" : "#000"}
+                />
+              ) : (
+                <>
+                  <Ionicons
+                    name={isFollowing ? "checkmark" : "person-add"}
+                    size={18}
+                    color={isFollowing ? "#00FFFF" : "#000"}
+                  />
+                  <Text
+                    style={[
+                      styles.followButtonText,
+                      isFollowing && styles.followingButtonText,
+                    ]}
+                  >
+                    {isFollowing ? "Following" : "Follow"}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
 
           {/* Stats */}
           <View style={styles.statsContainer}>
@@ -232,7 +278,7 @@ const UserProfile = () => {
                   key={recipe._id}
                   activeOpacity={0.9}
                   style={styles.recipeCard}
-                  onPress={() => router.push(`/categories/${recipe._id}`)}
+                  onPress={() => router.push(`/recipes/${recipe._id}`)}
                 >
                   <Image
                     source={{
@@ -275,6 +321,15 @@ const UserProfile = () => {
           )}
         </View>
       </ScrollView>
+
+      {/* Report Modal */}
+      <ReportModal
+        visible={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        targetType="user"
+        targetId={id || ""}
+        targetName={user?.username}
+      />
     </View>
   );
 };
@@ -328,6 +383,16 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.1)",
     alignItems: "center",
     justifyContent: "center",
+  },
+  reportButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 0, 85, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#FF0055",
   },
   headerTitle: {
     fontSize: 18,
@@ -383,6 +448,31 @@ const styles = StyleSheet.create({
     marginTop: 15,
     paddingHorizontal: 30,
     lineHeight: 20,
+  },
+  followButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#00FFFF",
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 25,
+    marginTop: 20,
+    minWidth: 140,
+  },
+  followingButton: {
+    backgroundColor: "transparent",
+    borderWidth: 2,
+    borderColor: "#00FFFF",
+  },
+  followButtonText: {
+    color: "#000",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  followingButtonText: {
+    color: "#00FFFF",
   },
   statsContainer: {
     flexDirection: "row",

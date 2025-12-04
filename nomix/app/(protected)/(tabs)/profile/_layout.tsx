@@ -11,6 +11,8 @@ const _layout = () => {
       <Stack.Screen name="settings" options={{ headerShown: false }} />
       <Stack.Screen name="favorites" options={{ headerShown: false }} />
       <Stack.Screen name="liked-recipes" options={{ headerShown: false }} />
+      <Stack.Screen name="followers" options={{ headerShown: false }} />
+      <Stack.Screen name="my-reports" options={{ headerShown: false }} />
       <Stack.Screen name="help" options={{ headerShown: false }} />
       <Stack.Screen name="support-chat" options={{ headerShown: false }} />
       <Stack.Screen name="privacy" options={{ headerShown: false }} />

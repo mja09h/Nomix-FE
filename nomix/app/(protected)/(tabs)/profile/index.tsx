@@ -83,6 +83,18 @@ const Profile = () => {
   };
 
   const menuItems = [
+    // Admin Dashboard - only show for admins
+    ...(profileData?.isAdmin
+      ? [
+          {
+            icon: "shield-checkmark",
+            label: "Admin Dashboard",
+            route: "/(protected)/admin",
+            color: "#FFD700",
+            isAdmin: true,
+          },
+        ]
+      : []),
     {
       icon: "person-outline",
       label: t("edit_profile"),
@@ -114,6 +126,12 @@ const Profile = () => {
       icon: "leaf-outline",
       label: "Ingredients",
       route: "/(protected)/ingredients",
+    },
+    {
+      icon: "flag-outline",
+      label: "My Reports",
+      route: "/profile/my-reports",
+      color: "#FF0055",
     },
     {
       icon: "settings-outline",
@@ -202,19 +220,29 @@ const Profile = () => {
               <Text style={styles.statLabel}>{t("recipes")}</Text>
             </View>
             <View style={styles.statDivider} />
-            <View style={styles.statItem}>
+            <TouchableOpacity
+              style={styles.statItem}
+              onPress={() => router.push("/profile/followers" as any)}
+              activeOpacity={0.7}
+            >
               <Text style={styles.statNumber}>
                 {profileData?.followers?.length || 0}
               </Text>
               <Text style={styles.statLabel}>{t("followers")}</Text>
-            </View>
+            </TouchableOpacity>
             <View style={styles.statDivider} />
-            <View style={styles.statItem}>
+            <TouchableOpacity
+              style={styles.statItem}
+              onPress={() =>
+                router.push("/profile/followers?tab=following" as any)
+              }
+              activeOpacity={0.7}
+            >
               <Text style={styles.statNumber}>
                 {profileData?.following?.length || 0}
               </Text>
               <Text style={styles.statLabel}>{t("following")}</Text>
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
 

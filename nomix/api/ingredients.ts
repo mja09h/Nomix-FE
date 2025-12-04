@@ -49,3 +49,33 @@ export const deleteIngredient = async (id: string): Promise<void> => {
         throw error;
     }
 };
+
+// Admin functions
+export const getAllIngredientsAdmin = async (): Promise<{ data: any[]; total: number }> => {
+    try {
+        const response = await client.get('/ingredients/admin/all');
+        return { data: response.data.data, total: response.data.total };
+    } catch (error) {
+        console.error('Error fetching all ingredients (admin):', error);
+        throw error;
+    }
+};
+
+export const adminDeleteIngredient = async (ingredientId: string): Promise<void> => {
+    try {
+        await client.delete(`/ingredients/admin/${ingredientId}`);
+    } catch (error) {
+        console.error(`Error deleting ingredient ${ingredientId} (admin):`, error);
+        throw error;
+    }
+};
+
+export const getReportsForIngredient = async (ingredientId: string): Promise<{ data: any[]; total: number }> => {
+    try {
+        const response = await client.get(`/ingredients/admin/${ingredientId}/reports`);
+        return { data: response.data.data, total: response.data.total };
+    } catch (error) {
+        console.error(`Error fetching reports for ingredient ${ingredientId}:`, error);
+        throw error;
+    }
+};

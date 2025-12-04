@@ -8,6 +8,7 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from "react-native";
 import React, { useState, useCallback } from "react";
 import { LinearGradient } from "expo-linear-gradient";
@@ -17,9 +18,13 @@ import { useRouter, useFocusEffect } from "expo-router";
 import Logo from "../../../../components/Logo";
 import { useLanguage } from "../../../../context/LanguageContext";
 import { useAuth } from "../../../../context/AuthContext";
-import { getAllUsers } from "../../../../api/auth";
+import { getAllUsers, getUserById, toggleFollow } from "../../../../api/auth";
 import { getImageUrl } from "../../../../api/index";
 import { User } from "../../../../types/User";
+
+interface UserWithFollowState extends User {
+  isFollowing?: boolean;
+}
 
 const Users = () => {
   const router = useRouter();
@@ -29,25 +34,42 @@ const Users = () => {
   const isRTL = language === "ar";
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserWithFollowState[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [followLoadingId, setFollowLoadingId] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     try {
       const response = await getAllUsers();
+      let allUsers: User[] = [];
+
       if (response && response.data) {
-        // Filter out current user from list
-        const otherUsers = response.data.filter(
+        allUsers = response.data.filter(
           (u: User) => u._id !== currentUser?._id
         );
-        setUsers(otherUsers);
       } else if (Array.isArray(response)) {
-        const otherUsers = response.filter(
-          (u: User) => u._id !== currentUser?._id
-        );
-        setUsers(otherUsers);
+        allUsers = response.filter((u: User) => u._id !== currentUser?._id);
       }
+
+      // Get current user's following list
+      let followingIds: string[] = [];
+      if (currentUser?._id) {
+        const currentUserData = await getUserById(currentUser._id);
+        if (currentUserData?.data?.following) {
+          followingIds = currentUserData.data.following.map((f: any) =>
+            typeof f === "string" ? f : f._id
+          );
+        }
+      }
+
+      // Add isFollowing state to each user
+      const usersWithFollowState = allUsers.map((u) => ({
+        ...u,
+        isFollowing: followingIds.includes(u._id || ""),
+      }));
+
+      setUsers(usersWithFollowState);
     } catch (error) {
       console.error("Failed to load users", error);
     } finally {
@@ -67,16 +89,49 @@ const Users = () => {
     fetchUsers();
   };
 
+  const handleToggleFollow = async (userId: string, e: any) => {
+    e.stopPropagation();
+    if (followLoadingId) return;
+
+    setFollowLoadingId(userId);
+    try {
+      const result = await toggleFollow(userId);
+      if (result.success) {
+        // Update local state
+        setUsers((prev) =>
+          prev.map((u) =>
+            u._id === userId
+              ? {
+                  ...u,
+                  isFollowing: !u.isFollowing,
+                  followers: u.isFollowing
+                    ? (u.followers || []).slice(0, -1)
+                    : [...(u.followers || []), currentUser?._id || ""],
+                }
+              : u
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Failed to toggle follow", error);
+      Alert.alert("Error", "Failed to update follow status.");
+    } finally {
+      setFollowLoadingId(null);
+    }
+  };
+
   const filteredUsers = users.filter(
     (user) =>
       user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const renderUserItem = ({ item }: { item: User }) => {
+  const renderUserItem = ({ item }: { item: UserWithFollowState }) => {
     const displayImage =
       getImageUrl(item.profilePicture) ||
       "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80";
+
+    const isLoadingFollow = followLoadingId === item._id;
 
     return (
       <TouchableOpacity
@@ -100,34 +155,42 @@ const Users = () => {
                 {item.name || item.username}
               </Text>
               <Text style={styles.userHandle}>@{item.username}</Text>
-              {item.bio && (
-                <Text style={styles.userBio} numberOfLines={2}>
-                  {item.bio}
+              <View style={styles.userStatsRow}>
+                <Text style={styles.userStatText}>
+                  {item.followers?.length || 0} followers
+                </Text>
+                <Text style={styles.userStatDot}>•</Text>
+                <Text style={styles.userStatText}>
+                  {item.recipes?.length || 0} recipes
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.followButton,
+                item.isFollowing && styles.followingButton,
+              ]}
+              onPress={(e) => handleToggleFollow(item._id || "", e)}
+              disabled={isLoadingFollow}
+              activeOpacity={0.8}
+            >
+              {isLoadingFollow ? (
+                <ActivityIndicator
+                  size="small"
+                  color={item.isFollowing ? "#00FFFF" : "#000"}
+                />
+              ) : (
+                <Text
+                  style={[
+                    styles.followButtonText,
+                    item.isFollowing && styles.followingButtonText,
+                  ]}
+                >
+                  {item.isFollowing ? "Following" : "Follow"}
                 </Text>
               )}
-            </View>
-
-            <View style={styles.statsContainer}>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>
-                  {item.recipes?.length || 0}
-                </Text>
-                <Text style={styles.statLabel}>Recipes</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>
-                  {item.followers?.length || 0}
-                </Text>
-                <Text style={styles.statLabel}>Followers</Text>
-              </View>
-            </View>
-
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color="rgba(255,255,255,0.5)"
-              style={styles.arrow}
-            />
+            </TouchableOpacity>
           </View>
         </LinearGradient>
       </TouchableOpacity>
@@ -304,9 +367,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   avatarContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     overflow: "hidden",
     borderWidth: 2,
     borderColor: "rgba(0, 255, 255, 0.3)",
@@ -317,10 +380,10 @@ const styles = StyleSheet.create({
   },
   userInfo: {
     flex: 1,
-    marginLeft: 15,
+    marginLeft: 12,
   },
   userName: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: "bold",
     color: "#FFFFFF",
   },
@@ -329,32 +392,40 @@ const styles = StyleSheet.create({
     color: "#00FFFF",
     marginTop: 2,
   },
-  userBio: {
-    fontSize: 12,
-    color: "#888",
-    marginTop: 4,
-    lineHeight: 16,
-  },
-  statsContainer: {
+  userStatsRow: {
     flexDirection: "row",
-    gap: 15,
-    marginRight: 10,
-  },
-  statItem: {
     alignItems: "center",
+    marginTop: 4,
   },
-  statNumber: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-  },
-  statLabel: {
-    fontSize: 10,
+  userStatText: {
+    fontSize: 11,
     color: "#888",
-    marginTop: 2,
   },
-  arrow: {
-    marginLeft: 5,
+  userStatDot: {
+    color: "#555",
+    marginHorizontal: 6,
+  },
+  followButton: {
+    backgroundColor: "#00FFFF",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    minWidth: 90,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  followingButton: {
+    backgroundColor: "transparent",
+    borderWidth: 1.5,
+    borderColor: "#00FFFF",
+  },
+  followButtonText: {
+    color: "#000",
+    fontSize: 13,
+    fontWeight: "bold",
+  },
+  followingButtonText: {
+    color: "#00FFFF",
   },
   emptyContainer: {
     alignItems: "center",
