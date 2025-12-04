@@ -1154,7 +1154,9 @@ const Home = () => {
                     <Image
                       source={{
                         uri:
-                          getImageUrl(randomRecipe.image) ||
+                          getImageUrl(
+                            randomRecipe.images?.[0] || randomRecipe.image
+                          ) ||
                           "https://images.unsplash.com/photo-1546171753-97d7676e4602?auto=format&fit=crop&w=600&q=80",
                       }}
                       style={styles.revealImage}
@@ -1465,7 +1467,9 @@ const Home = () => {
                           <Image
                             source={{
                               uri:
-                                getImageUrl(wheelResult.image) ||
+                                getImageUrl(
+                                  wheelResult.images?.[0] || wheelResult.image
+                                ) ||
                                 "https://images.unsplash.com/photo-1546171753-97d7676e4602?auto=format&fit=crop&w=600&q=80",
                             }}
                             style={styles.wheelResultImage}
