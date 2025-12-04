@@ -11,6 +11,7 @@ const _layout = () => {
         options={{ headerShown: false, presentation: "modal" }}
       />
       <Stack.Screen name="[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="edit" options={{ headerShown: false }} />
     </Stack>
   );
 };

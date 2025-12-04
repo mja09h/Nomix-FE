@@ -10,8 +10,6 @@ import {
   ActivityIndicator,
   Modal,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
   Animated,
   Easing,
   Dimensions,
@@ -19,85 +17,42 @@ import {
 import React, { useState, useEffect, useRef } from "react";
 
 const { width, height } = Dimensions.get("window");
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
-import { useLanguage } from "../../../context/LanguageContext";
-import { createRecipe } from "../../../api/recipes";
-import { getAllCategories, createCategory } from "../../../api/categories";
-import { getAllIngredients, createIngredient } from "../../../api/ingredients";
-import { Category } from "../../../types/Category";
-import { Ingredient } from "../../../types/Recipe";
+import { useLanguage } from "../../../../context/LanguageContext";
+import {
+  getRecipeById,
+  updateRecipe,
+  addImagesToRecipe,
+  removeImageFromRecipe,
+} from "../../../../api/recipes";
+import { getAllCategories, createCategory } from "../../../../api/categories";
+import {
+  getAllIngredients,
+  createIngredient,
+} from "../../../../api/ingredients";
+import { getImageUrl } from "../../../../api/index";
+import { Category } from "../../../../types/Category";
+import { Ingredient, Recipe } from "../../../../types/Recipe";
 
-const AddRecipe = () => {
+const EditRecipe = () => {
   const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const isRTL = language === "ar";
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-
-  // Page animations
-  const headerAnim = useRef(new Animated.Value(0)).current;
-  const formAnim = useRef(new Animated.Value(0)).current;
-  const imagePickerAnim = useRef(new Animated.Value(0)).current;
-  const buttonAnim = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-
-  // Start page animations on mount
-  useEffect(() => {
-    // Staggered entrance animations
-    Animated.stagger(100, [
-      Animated.spring(headerAnim, {
-        toValue: 1,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.spring(imagePickerAnim, {
-        toValue: 1,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.spring(formAnim, {
-        toValue: 1,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.spring(buttonAnim, {
-        toValue: 1,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Pulse animation for create button
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.02,
-          duration: 1500,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1500,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
-  const [mainImage, setMainImage] = useState<string | null>(null);
-  const [extraImages, setExtraImages] = useState<string[]>([]);
+  const [images, setImages] = useState<string[]>([]); // Current images (URLs or local URIs)
+  const [originalImages, setOriginalImages] = useState<string[]>([]); // Original server images
+  const [newImages, setNewImages] = useState<string[]>([]); // Newly added local images
+  const [removedImages, setRemovedImages] = useState<string[]>([]); // Images to remove
   const [calories, setCalories] = useState("");
   const [protein, setProtein] = useState("");
   const [fat, setFat] = useState("");
@@ -131,7 +86,6 @@ const AddRecipe = () => {
 
   // Success modal states
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [createdRecipeName, setCreatedRecipeName] = useState("");
 
   // Animation refs for success modal
   const successModalOpacity = useRef(new Animated.Value(0)).current;
@@ -152,8 +106,7 @@ const AddRecipe = () => {
   ).current;
 
   // Show success animation
-  const showSuccessAnimation = (recipeName: string) => {
-    setCreatedRecipeName(recipeName);
+  const showSuccessAnimation = () => {
     setShowSuccessModal(true);
 
     // Reset animations
@@ -284,61 +237,95 @@ const AddRecipe = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!id) return;
+
       try {
-        const [categories, ingredients] = await Promise.all([
+        const [recipe, categories, ingredients] = await Promise.all([
+          getRecipeById(id),
           getAllCategories(),
           getAllIngredients(),
         ]);
+
         setAvailableCategories(categories || []);
         setAvailableIngredients(ingredients || []);
-      } catch (e) {
-        console.log("Failed to fetch options", e);
-        // Alert.alert("Error", "Could not load categories or ingredients.");
+
+        // Populate form with recipe data
+        setName(recipe.name || "");
+        setDescription(recipe.description || "");
+
+        // Handle multiple images
+        if (recipe.images && recipe.images.length > 0) {
+          const imageUrls = recipe.images
+            .map((img: string) => getImageUrl(img))
+            .filter((url): url is string => url !== null);
+          setImages(imageUrls);
+          setOriginalImages(recipe.images);
+        } else if (recipe.image) {
+          // Fallback for single image (legacy)
+          const imageUrl = getImageUrl(recipe.image);
+          setImages(imageUrl ? [imageUrl] : []);
+          setOriginalImages(recipe.image ? [recipe.image] : []);
+        }
+
+        setCalories(recipe.calories?.toString() || "");
+        setProtein(recipe.protein?.toString() || "");
+        setFat(recipe.fat?.toString() || "");
+        setCarbs(recipe.carbohydrates?.toString() || "");
+
+        // Set selected categories
+        if (recipe.category && Array.isArray(recipe.category)) {
+          const categoryIds = recipe.category.map((cat: any) =>
+            typeof cat === "string" ? cat : cat._id
+          );
+          setSelectedCategories(categoryIds);
+        }
+
+        // Set selected ingredients
+        if (recipe.ingredients && Array.isArray(recipe.ingredients)) {
+          const ingredientIds = recipe.ingredients.map((ing: any) =>
+            typeof ing === "string" ? ing : ing._id
+          );
+          setSelectedIngredients(ingredientIds);
+        }
+
+        // Set instructions
+        if (recipe.instructions && Array.isArray(recipe.instructions)) {
+          setInstructionsList(recipe.instructions);
+        }
+      } catch (error) {
+        console.error("Failed to fetch recipe data:", error);
+        Alert.alert("Error", "Failed to load recipe data");
+        router.back();
+      } finally {
+        setIsFetching(false);
       }
     };
+
     fetchData();
-  }, []);
+  }, [id]);
 
-  // Pick main image (required)
-  const pickMainImage = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setMainImage(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error("Error picking main image:", error);
-    }
-  };
-
-  // Pick extra images (max 3)
-  const pickExtraImages = async () => {
+  const pickImages = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
-        selectionLimit: 3 - extraImages.length,
+        selectionLimit: 10 - images.length,
         quality: 0.8,
         allowsEditing: false,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const newImages = result.assets.map((asset) => asset.uri);
-        setExtraImages((prev) => [...prev, ...newImages].slice(0, 3));
+        const pickedImages = result.assets.map((asset) => asset.uri);
+        setImages((prev) => [...prev, ...pickedImages].slice(0, 10));
+        setNewImages((prev) => [...prev, ...pickedImages]);
       }
     } catch (error) {
-      console.error("Error picking extra images:", error);
+      console.error("Error picking images:", error);
     }
   };
 
-  // Fallback single extra image picker
-  const pickSingleExtraImage = async () => {
+  // Fallback single image picker
+  const pickSingleImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -348,31 +335,55 @@ const AddRecipe = () => {
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        setExtraImages((prev) => {
-          if (prev.length >= 3) return prev;
-          return [...prev, result.assets[0].uri];
+        const newUri = result.assets[0].uri;
+        setImages((prev) => {
+          if (prev.length >= 10) return prev;
+          return [...prev, newUri];
         });
+        setNewImages((prev) => [...prev, newUri]);
       }
     } catch (error) {
-      console.error("Error picking extra image:", error);
+      console.error("Error picking image:", error);
     }
   };
 
-  const removeExtraImage = (index: number) => {
-    setExtraImages((prev) => prev.filter((_, i) => i !== index));
+  const removeImage = (index: number) => {
+    const imageToRemove = images[index];
+
+    // Check if it's an original image (server URL) or a new local image
+    const isOriginal = originalImages.some(
+      (orig) => getImageUrl(orig) === imageToRemove
+    );
+
+    if (isOriginal) {
+      // Find the original path and mark for removal
+      const originalPath = originalImages.find(
+        (orig) => getImageUrl(orig) === imageToRemove
+      );
+      if (originalPath) {
+        setRemovedImages((prev) => [...prev, originalPath]);
+      }
+    } else {
+      // Remove from new images
+      setNewImages((prev) => prev.filter((img) => img !== imageToRemove));
+    }
+
+    setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const toggleCategory = (id: string) => {
+  const toggleCategory = (categoryId: string) => {
     setSelectedCategories((prev) => {
-      if (prev.includes(id)) return prev.filter((c) => c !== id);
-      return [...prev, id];
+      if (prev.includes(categoryId))
+        return prev.filter((c) => c !== categoryId);
+      return [...prev, categoryId];
     });
   };
 
-  const toggleIngredient = (id: string) => {
+  const toggleIngredient = (ingredientId: string) => {
     setSelectedIngredients((prev) => {
-      if (prev.includes(id)) return prev.filter((i) => i !== id);
-      return [...prev, id];
+      if (prev.includes(ingredientId))
+        return prev.filter((i) => i !== ingredientId);
+      return [...prev, ingredientId];
     });
   };
 
@@ -473,16 +484,16 @@ const AddRecipe = () => {
     }
   };
 
-  const handleCreate = async () => {
+  const handleUpdate = async () => {
     if (
       !name ||
-      !mainImage ||
+      images.length === 0 ||
       instructionsList.length === 0 ||
       selectedIngredients.length === 0 ||
       selectedCategories.length === 0
     ) {
       showInlineSuccess(
-        "Please fill in all required fields: Name, Main Image, Categories, Ingredients, Instructions",
+        "Please fill in all required fields: Name, At least 1 Image, Categories, Ingredients, Instructions",
         "error"
       );
       return;
@@ -490,31 +501,48 @@ const AddRecipe = () => {
 
     setIsLoading(true);
     try {
-      // Combine main image with extra images
-      const allImages = [mainImage, ...extraImages];
-
-      const recipeData = {
+      // First, update the recipe data (without images)
+      const recipeData: any = {
         name,
         description: description || undefined,
-        images: allImages, // Main image + extra images
         calories: calories ? Number(calories) : undefined,
         protein: protein ? Number(protein) : undefined,
         fat: fat ? Number(fat) : undefined,
         carbohydrates: carbs ? Number(carbs) : undefined,
-        ingredients: selectedIngredients, // IDs
+        ingredients: selectedIngredients,
         instructions: instructionsList,
-        category: selectedCategories, // IDs
+        category: selectedCategories,
       };
 
-      await createRecipe(recipeData);
+      await updateRecipe(id!, recipeData);
+
+      // Then, remove images using dedicated endpoint
+      if (removedImages.length > 0) {
+        for (const imageUrl of removedImages) {
+          try {
+            await removeImageFromRecipe(id!, imageUrl);
+          } catch (err) {
+            console.error("Failed to remove image:", imageUrl, err);
+          }
+        }
+      }
+
+      // Finally, add new images using dedicated endpoint
+      if (newImages.length > 0) {
+        try {
+          await addImagesToRecipe(id!, newImages);
+        } catch (err) {
+          console.error("Failed to add new images:", err);
+        }
+      }
 
       // Show success animation instead of alert
-      showSuccessAnimation(name);
+      showSuccessAnimation();
     } catch (error: any) {
       console.error(error);
       const msg =
         error.response?.data?.message ||
-        "Failed to create recipe. Please try again.";
+        "Failed to update recipe. Please try again.";
       showInlineSuccess(msg, "error");
     } finally {
       setIsLoading(false);
@@ -553,200 +581,107 @@ const AddRecipe = () => {
     c.name.toLowerCase().includes(categorySearch.toLowerCase())
   );
 
+  if (isFetching) {
+    return (
+      <View style={[styles.root, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#00FFFF" />
+        <Text style={styles.loadingText}>Loading recipe...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
-      {/* Background Gradient Decoration */}
-      <View style={styles.backgroundDecoration} pointerEvents="none">
-        <LinearGradient
-          colors={["rgba(0, 255, 255, 0.1)", "transparent"]}
-          style={styles.gradientCircle1}
-        />
-        <LinearGradient
-          colors={["rgba(255, 0, 255, 0.08)", "transparent"]}
-          style={styles.gradientCircle2}
-        />
-      </View>
-
-      {/* Animated Header */}
-      <Animated.View
-        style={[
-          styles.header,
-          isRTL && { flexDirection: "row-reverse" },
-          {
-            opacity: headerAnim,
-            transform: [
-              {
-                translateY: headerAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [-30, 0],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
+      {/* Header */}
+      <View style={[styles.header, isRTL && { flexDirection: "row-reverse" }]}>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
         >
-          <LinearGradient
-            colors={["rgba(255,255,255,0.15)", "rgba(255,255,255,0.05)"]}
-            style={styles.backButtonGradient}
-          >
-            <Ionicons
-              name={isRTL ? "arrow-forward" : "arrow-back"}
-              size={24}
-              color="#FFFFFF"
-            />
-          </LinearGradient>
+          <Ionicons
+            name={isRTL ? "arrow-forward" : "arrow-back"}
+            size={24}
+            color="#FFFFFF"
+          />
         </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>✨ Add Recipe</Text>
-          <Text style={styles.headerSubtitle}>
-            Share your culinary creation
-          </Text>
-        </View>
+        <Text style={styles.headerTitle}>Edit Recipe</Text>
         <View style={{ width: 40 }} />
-      </Animated.View>
+      </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Animated Image Picker */}
-        <Animated.View
-          style={{
-            opacity: imagePickerAnim,
-            transform: [
-              {
-                translateY: imagePickerAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [50, 0],
-                }),
-              },
-              {
-                scale: imagePickerAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.9, 1],
-                }),
-              },
-            ],
-          }}
-        >
-          {/* Main Image Section (Required) */}
-          <View style={styles.mainImageSection}>
-            <Text style={[styles.label, isRTL && { textAlign: "right" }]}>
-              Main Photo <Text style={styles.required}>*</Text>
-            </Text>
-            <TouchableOpacity
-              onPress={pickMainImage}
-              style={styles.mainImagePicker}
-            >
-              {mainImage ? (
-                <>
-                  <Image
-                    source={{ uri: mainImage }}
-                    style={styles.mainPreviewImage}
-                  />
-                  <View style={styles.mainImageOverlay}>
-                    <LinearGradient
-                      colors={["transparent", "rgba(0,0,0,0.7)"]}
-                      style={styles.mainImageGradientOverlay}
-                    >
-                      <View style={styles.changeMainImageBadge}>
-                        <Ionicons name="camera" size={16} color="#FFF" />
-                        <Text style={styles.changeMainImageText}>Change</Text>
-                      </View>
-                    </LinearGradient>
-                  </View>
-                  <View style={styles.mainBadge}>
-                    <Ionicons name="star" size={12} color="#000" />
-                    <Text style={styles.mainBadgeText}>Main</Text>
-                  </View>
-                </>
-              ) : (
-                <LinearGradient
-                  colors={["rgba(0,255,255,0.15)", "rgba(255,0,255,0.15)"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.mainImagePlaceholder}
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Multiple Images Section */}
+        <View style={styles.imagesSection}>
+          <Text style={[styles.label, isRTL && { textAlign: "right" }]}>
+            Photos ({images.length}/10) *
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.imagesScrollContent}
+          >
+            {images.map((uri, index) => (
+              <View key={index} style={styles.imagePreviewWrapper}>
+                <Image source={{ uri }} style={styles.multiPreviewImage} />
+                <TouchableOpacity
+                  style={styles.removeImageBtn}
+                  onPress={() => removeImage(index)}
                 >
-                  <View style={styles.mainUploadIconContainer}>
-                    <Ionicons name="camera-outline" size={50} color="#00FFFF" />
+                  <LinearGradient
+                    colors={["#FF0055", "#FF3366"]}
+                    style={styles.removeImageGradient}
+                  >
+                    <Ionicons name="close" size={16} color="#FFF" />
+                  </LinearGradient>
+                </TouchableOpacity>
+                {index === 0 && (
+                  <View style={styles.mainImageBadge}>
+                    <Text style={styles.mainImageBadgeText}>Main</Text>
                   </View>
-                  <Text style={styles.mainUploadText}>
-                    Tap to add main photo
-                  </Text>
-                  <Text style={styles.mainUploadHint}>Required</Text>
-                </LinearGradient>
-              )}
-            </TouchableOpacity>
-          </View>
+                )}
+              </View>
+            ))}
+            {images.length < 10 && (
+              <View style={styles.addImageButtonsContainer}>
+                {/* Multi-select button */}
+                <TouchableOpacity
+                  onPress={pickImages}
+                  style={styles.addImageBtn}
+                >
+                  <LinearGradient
+                    colors={["rgba(0,255,255,0.1)", "rgba(255,0,255,0.1)"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.addImageGradient}
+                  >
+                    <Ionicons name="images-outline" size={36} color="#00FFFF" />
+                    <Text style={styles.addImageText}>
+                      {images.length === 0 ? "Select Photos *" : "Select More"}
+                    </Text>
+                    <Text style={styles.addImageHint}>{images.length}/10</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
 
-          {/* Extra Images Section (Optional, max 3) */}
-          <View style={styles.extraImagesSection}>
-            <Text style={[styles.label, isRTL && { textAlign: "right" }]}>
-              Extra Photos ({extraImages.length}/3)
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.extraImagesScrollContent}
-            >
-              {extraImages.map((uri, index) => (
-                <View key={index} style={styles.extraImageWrapper}>
-                  <Image source={{ uri }} style={styles.extraPreviewImage} />
-                  <TouchableOpacity
-                    style={styles.removeExtraImageBtn}
-                    onPress={() => removeExtraImage(index)}
+                {/* Single image button (fallback) */}
+                <TouchableOpacity
+                  onPress={pickSingleImage}
+                  style={styles.addSingleImageBtn}
+                >
+                  <LinearGradient
+                    colors={["rgba(255,0,255,0.1)", "rgba(0,255,255,0.1)"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.addImageGradient}
                   >
-                    <LinearGradient
-                      colors={["#FF0055", "#FF3366"]}
-                      style={styles.removeExtraImageGradient}
-                    >
-                      <Ionicons name="close" size={14} color="#FFF" />
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </View>
-              ))}
-              {extraImages.length < 3 && (
-                <View style={styles.addExtraButtonsContainer}>
-                  <TouchableOpacity
-                    onPress={pickExtraImages}
-                    style={styles.addExtraImageBtn}
-                  >
-                    <LinearGradient
-                      colors={["rgba(255,0,255,0.1)", "rgba(0,255,255,0.1)"]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.addExtraImageGradient}
-                    >
-                      <Ionicons
-                        name="images-outline"
-                        size={28}
-                        color="#FF00FF"
-                      />
-                      <Text style={styles.addExtraImageText}>Select</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={pickSingleExtraImage}
-                    style={styles.addExtraSingleBtn}
-                  >
-                    <LinearGradient
-                      colors={["rgba(0,255,255,0.1)", "rgba(255,0,255,0.1)"]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.addExtraImageGradient}
-                    >
-                      <Ionicons name="add" size={28} color="#00FFFF" />
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </ScrollView>
-          </View>
-        </Animated.View>
+                    <Ionicons name="camera-outline" size={32} color="#FF00FF" />
+                    <Text style={[styles.addImageText, { color: "#FF00FF" }]}>
+                      Add One
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            )}
+          </ScrollView>
+        </View>
 
         {renderInput("Recipe Name", name, setName, "e.g. Spicy Chicken Pasta")}
 
@@ -787,16 +722,16 @@ const AddRecipe = () => {
               isRTL && { flexDirection: "row-reverse" },
             ]}
           >
-            {selectedCategories.map((id) => {
+            {selectedCategories.map((categoryId) => {
               const cat = availableCategories.find(
-                (c) => (c._id || c.id) === id
+                (c) => (c._id || c.id) === categoryId
               );
               if (!cat) return null;
               return (
-                <View key={id} style={styles.chip}>
+                <View key={categoryId} style={styles.chip}>
                   <Text style={styles.chipText}>{cat.name}</Text>
                   <TouchableOpacity
-                    onPress={() => toggleCategory(id)}
+                    onPress={() => toggleCategory(categoryId)}
                     style={styles.removeBtn}
                   >
                     <Ionicons name="close-circle" size={16} color="#FF0055" />
@@ -827,14 +762,16 @@ const AddRecipe = () => {
               isRTL && { flexDirection: "row-reverse" },
             ]}
           >
-            {selectedIngredients.map((id) => {
-              const ing = availableIngredients.find((i) => i._id === id);
+            {selectedIngredients.map((ingredientId) => {
+              const ing = availableIngredients.find(
+                (i) => i._id === ingredientId
+              );
               if (!ing) return null;
               return (
-                <View key={id} style={styles.chip}>
+                <View key={ingredientId} style={styles.chip}>
                   <Text style={styles.chipText}>{ing.name}</Text>
                   <TouchableOpacity
-                    onPress={() => toggleIngredient(id)}
+                    onPress={() => toggleIngredient(ingredientId)}
                     style={styles.removeBtn}
                   >
                     <Ionicons name="close-circle" size={16} color="#FF0055" />
@@ -934,47 +871,24 @@ const AddRecipe = () => {
           </View>
         </View>
 
-        {/* Animated Create Button */}
-        <Animated.View
-          style={{
-            opacity: buttonAnim,
-            transform: [
-              {
-                translateY: buttonAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [30, 0],
-                }),
-              },
-              { scale: pulseAnim },
-            ],
-          }}
+        <TouchableOpacity
+          onPress={handleUpdate}
+          disabled={isLoading}
+          activeOpacity={0.8}
         >
-          <TouchableOpacity
-            onPress={handleCreate}
-            disabled={isLoading}
-            activeOpacity={0.9}
+          <LinearGradient
+            colors={["#00FFFF", "#FF00FF"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.updateButton}
           >
-            <LinearGradient
-              colors={["#00FFFF", "#FF00FF"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.createButton}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#FFF" size="small" />
-              ) : (
-                <View style={styles.createButtonContent}>
-                  <Ionicons name="restaurant" size={22} color="#000" />
-                  <Text style={styles.createButtonText}>Create Recipe</Text>
-                  <Ionicons name="sparkles" size={18} color="#000" />
-                </View>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-        </Animated.View>
-
-        {/* Bottom spacing */}
-        <View style={{ height: 30 }} />
+            {isLoading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={styles.updateButtonText}>Update Recipe</Text>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Ingredient Picker Modal */}
@@ -1457,14 +1371,6 @@ const AddRecipe = () => {
         >
           {/* Confetti */}
           {confettiAnims.map((anim, index) => {
-            const colors = [
-              "#00FFFF",
-              "#FF00FF",
-              "#FFD700",
-              "#10B981",
-              "#F59E0B",
-              "#EC4899",
-            ];
             const shapes = ["🎉", "🎊", "✨", "⭐", "🌟", "💫"];
             return (
               <Animated.Text
@@ -1529,14 +1435,14 @@ const AddRecipe = () => {
             <Animated.Text
               style={[styles.successTitle, { opacity: titleOpacity }]}
             >
-              Recipe Created!
+              Recipe Updated!
             </Animated.Text>
 
             {/* Subtitle */}
             <Animated.Text
               style={[styles.successSubtitle, { opacity: subtitleOpacity }]}
             >
-              "{createdRecipeName}" has been added to your recipes
+              "{name}" has been updated successfully
             </Animated.Text>
 
             {/* Recipe Icon */}
@@ -1552,7 +1458,7 @@ const AddRecipe = () => {
                   borderColor: "rgba(255,255,255,0.2)",
                 }}
               >
-                <Ionicons name="restaurant" size={50} color="#00FFFF" />
+                <Ionicons name="create" size={50} color="#FF00FF" />
               </LinearGradient>
             </Animated.View>
 
@@ -1565,7 +1471,7 @@ const AddRecipe = () => {
                   end={{ x: 1, y: 0 }}
                   style={styles.successButton}
                 >
-                  <Text style={styles.successButtonText}>Awesome!</Text>
+                  <Text style={styles.successButtonText}>Perfect!</Text>
                   <Ionicons name="arrow-forward" size={20} color="#000" />
                 </LinearGradient>
               </TouchableOpacity>
@@ -1574,16 +1480,16 @@ const AddRecipe = () => {
             {/* Decorative sparkles */}
             <View style={styles.sparkleContainer} pointerEvents="none">
               <View style={[styles.sparkle, { top: 20, left: 20 }]}>
-                <Ionicons name="star" size={20} color="#FFD700" />
+                <Ionicons name="checkmark-done" size={20} color="#00FF00" />
               </View>
               <View style={[styles.sparkle, { top: 40, right: 25 }]}>
-                <Ionicons name="sparkles" size={18} color="#00FFFF" />
+                <Ionicons name="star" size={18} color="#FFFF00" />
               </View>
               <View style={[styles.sparkle, { bottom: 100, left: 30 }]}>
-                <Ionicons name="star-outline" size={16} color="#FF00FF" />
+                <Ionicons name="sparkles" size={16} color="#00FFFF" />
               </View>
               <View style={[styles.sparkle, { bottom: 120, right: 35 }]}>
-                <Ionicons name="flash" size={16} color="#00FF00" />
+                <Ionicons name="heart" size={16} color="#FF00FF" />
               </View>
             </View>
           </Animated.View>
@@ -1618,36 +1524,21 @@ const AddRecipe = () => {
   );
 };
 
-export default AddRecipe;
+export default EditRecipe;
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: "#050510",
   },
-  backgroundDecoration: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    overflow: "hidden",
+  loadingContainer: {
+    justifyContent: "center",
+    alignItems: "center",
   },
-  gradientCircle1: {
-    position: "absolute",
-    top: -100,
-    right: -100,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-  },
-  gradientCircle2: {
-    position: "absolute",
-    bottom: 100,
-    left: -100,
-    width: 250,
-    height: 250,
-    borderRadius: 125,
+  loadingText: {
+    color: "#FFFFFF",
+    marginTop: 15,
+    fontSize: 16,
   },
   header: {
     flexDirection: "row",
@@ -1657,29 +1548,17 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   backButton: {
-    overflow: "hidden",
-    borderRadius: 22,
-  },
-  backButtonGradient: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     alignItems: "center",
     justifyContent: "center",
   },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: "center",
-  },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "bold",
     color: "#FFFFFF",
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    color: "#888",
-    marginTop: 4,
   },
   scrollContent: {
     padding: 20,
@@ -1687,37 +1566,14 @@ const styles = StyleSheet.create({
   },
   imagePicker: {
     width: "100%",
-    height: 220,
-    backgroundColor: "rgba(255, 255, 255, 0.03)",
-    borderRadius: 24,
+    height: 200,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    borderRadius: 20,
     marginBottom: 30,
     overflow: "hidden",
-    borderWidth: 2,
-    borderColor: "rgba(0, 255, 255, 0.2)",
-    borderStyle: "dashed",
-  },
-  imageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  imageGradient: {
-    flex: 1,
-    justifyContent: "flex-end",
-    padding: 15,
-  },
-  changeImageBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 6,
-    backgroundColor: "rgba(0, 255, 255, 0.2)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-  },
-  changeImageText: {
-    color: "#FFF",
-    fontSize: 12,
-    fontWeight: "600",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    position: "relative",
   },
   previewImage: {
     width: "100%",
@@ -1728,207 +1584,134 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 22,
-  },
-  uploadIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "rgba(0, 255, 255, 0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 15,
   },
   uploadText: {
-    color: "#FFFFFF",
-    fontSize: 16,
+    color: "#00FFFF",
+    marginTop: 10,
     fontWeight: "600",
   },
-  uploadHint: {
-    color: "#666",
-    fontSize: 12,
-    marginTop: 6,
+  editImageBadge: {
+    position: "absolute",
+    bottom: 10,
+    right: 10,
+    backgroundColor: "#00FFFF",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  // Main Image styles
-  mainImageSection: {
-    marginBottom: 20,
+  // Multiple images styles
+  imagesSection: {
+    marginBottom: 25,
   },
-  required: {
-    color: "#FF0055",
+  imagesScrollContent: {
+    paddingRight: 20,
+    gap: 12,
+    paddingTop: 10,
   },
-  mainImagePicker: {
+  imagePreviewWrapper: {
+    width: 140,
+    height: 140,
+    borderRadius: 16,
+    overflow: "hidden",
+    position: "relative",
+  },
+  multiPreviewImage: {
     width: "100%",
-    height: 200,
-    borderRadius: 20,
+    height: "100%",
+    resizeMode: "cover",
+  },
+  removeImageBtn: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    zIndex: 10,
+  },
+  removeImageGradient: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  mainImageBadge: {
+    position: "absolute",
+    bottom: 8,
+    left: 8,
+    backgroundColor: "rgba(0, 255, 255, 0.9)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  mainImageBadgeText: {
+    color: "#000",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  addImageButtonsContainer: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  addImageBtn: {
+    width: 120,
+    height: 140,
+    borderRadius: 16,
     overflow: "hidden",
     borderWidth: 2,
     borderColor: "rgba(0, 255, 255, 0.3)",
     borderStyle: "dashed",
-    position: "relative",
   },
-  mainPreviewImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
-  mainImageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  mainImageGradientOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    padding: 12,
-  },
-  changeMainImageBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 6,
-    backgroundColor: "rgba(0, 255, 255, 0.3)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  changeMainImageText: {
-    color: "#FFF",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  mainBadge: {
-    position: "absolute",
-    top: 12,
-    left: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#00FFFF",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-  },
-  mainBadgeText: {
-    color: "#000",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  mainImagePlaceholder: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 18,
-  },
-  mainUploadIconContainer: {
+  addSingleImageBtn: {
     width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: "rgba(0, 255, 255, 0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  mainUploadText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  mainUploadHint: {
-    color: "#00FFFF",
-    fontSize: 12,
-    marginTop: 4,
-    fontWeight: "600",
-  },
-  // Extra Images styles
-  extraImagesSection: {
-    marginBottom: 25,
-  },
-  extraImagesScrollContent: {
-    gap: 10,
-    paddingRight: 10,
-  },
-  extraImageWrapper: {
-    width: 100,
-    height: 100,
-    borderRadius: 14,
-    overflow: "hidden",
-    position: "relative",
-  },
-  extraPreviewImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
-  removeExtraImageBtn: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    zIndex: 10,
-  },
-  removeExtraImageGradient: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addExtraButtonsContainer: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  addExtraImageBtn: {
-    width: 80,
-    height: 100,
-    borderRadius: 14,
+    height: 140,
+    borderRadius: 16,
     overflow: "hidden",
     borderWidth: 2,
     borderColor: "rgba(255, 0, 255, 0.3)",
     borderStyle: "dashed",
   },
-  addExtraSingleBtn: {
-    width: 60,
-    height: 100,
-    borderRadius: 14,
-    overflow: "hidden",
-    borderWidth: 2,
-    borderColor: "rgba(0, 255, 255, 0.3)",
-    borderStyle: "dashed",
-  },
-  addExtraImageGradient: {
+  addImageGradient: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
+    gap: 6,
   },
-  addExtraImageText: {
-    color: "#FF00FF",
-    fontSize: 11,
+  addImageText: {
+    color: "#00FFFF",
+    fontSize: 12,
     fontWeight: "600",
+    textAlign: "center",
+  },
+  addImageHint: {
+    color: "#666",
+    fontSize: 11,
   },
   inputGroup: {
-    marginBottom: 22,
+    marginBottom: 20,
   },
   label: {
     color: "#FFFFFF",
-    marginBottom: 10,
-    fontSize: 15,
-    fontWeight: "700",
-    letterSpacing: 0.5,
+    marginBottom: 8,
+    fontSize: 14,
+    fontWeight: "600",
   },
   input: {
-    backgroundColor: "rgba(255, 255, 255, 0.06)",
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    borderRadius: 12,
+    padding: 15,
     color: "#FFFFFF",
-    borderWidth: 2,
-    borderColor: "rgba(0, 255, 255, 0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
     fontSize: 16,
   },
   descriptionInput: {
-    backgroundColor: "rgba(255, 255, 255, 0.06)",
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    borderRadius: 12,
+    padding: 15,
     color: "#FFFFFF",
-    borderWidth: 2,
-    borderColor: "rgba(0, 255, 255, 0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
     fontSize: 16,
     minHeight: 100,
   },
@@ -1955,44 +1738,34 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   chip: {
-    backgroundColor: "rgba(0, 255, 255, 0.12)",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 25,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     borderWidth: 1,
-    borderColor: "rgba(0, 255, 255, 0.3)",
-  },
-  selectedChip: {
-    backgroundColor: "#00FFFF",
-    borderColor: "#00FFFF",
+    borderColor: "rgba(255, 255, 255, 0.1)",
   },
   chipText: {
     color: "#FFFFFF",
     fontSize: 14,
   },
-  selectedChipText: {
-    color: "#000000",
-    fontWeight: "bold",
-  },
   removeBtn: {
     padding: 2,
   },
   selectButton: {
-    backgroundColor: "rgba(0, 255, 255, 0.08)",
-    padding: 16,
-    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    padding: 15,
+    borderRadius: 12,
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "rgba(0, 255, 255, 0.2)",
-    borderStyle: "dashed",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
   },
   selectButtonText: {
     color: "#00FFFF",
     fontWeight: "bold",
-    fontSize: 15,
   },
   instructionItem: {
     flexDirection: "row",
@@ -2022,24 +1795,14 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
   },
-  createButton: {
-    marginTop: 25,
-    paddingVertical: 18,
-    borderRadius: 20,
+  updateButton: {
+    marginTop: 20,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: "center",
-    shadowColor: "#00FFFF",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 15,
-    elevation: 10,
   },
-  createButtonContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  createButtonText: {
-    color: "#000000",
+  updateButtonText: {
+    color: "#FFFFFF",
     fontSize: 18,
     fontWeight: "bold",
     textTransform: "uppercase",
@@ -2127,7 +1890,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 14,
-    backgroundColor: "#00FFFF",
+    backgroundColor: "#10B981",
     alignItems: "center",
     justifyContent: "center",
   },

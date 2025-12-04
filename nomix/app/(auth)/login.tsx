@@ -4,13 +4,13 @@ import {
   View,
   TextInput,
   TouchableOpacity,
-  Alert,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   Animated,
   Easing,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
@@ -28,6 +28,167 @@ import { login as apiLogin } from "../../api/auth";
 import { schedulePushNotification } from "../../utils/notifications";
 import { getNotificationsEnabled } from "../../utils/preferences";
 
+// Custom Alert Component for Login Errors
+interface LoginAlertProps {
+  visible: boolean;
+  type: "error" | "banned" | "deactivated";
+  title: string;
+  message: string;
+  onClose: () => void;
+}
+
+const LoginAlert: React.FC<LoginAlertProps> = ({
+  visible,
+  type,
+  title,
+  message,
+  onClose,
+}) => {
+  const scaleAnim = useRef(new Animated.Value(0.5)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 8,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      scaleAnim.setValue(0.5);
+      opacityAnim.setValue(0);
+    }
+  }, [visible]);
+
+  const getIconAndColor = () => {
+    switch (type) {
+      case "banned":
+        return {
+          icon: "ban",
+          color: "#FF0055",
+          bgColor: "rgba(255, 0, 85, 0.2)",
+        };
+      case "deactivated":
+        return {
+          icon: "person-remove",
+          color: "#FFD700",
+          bgColor: "rgba(255, 215, 0, 0.2)",
+        };
+      default:
+        return {
+          icon: "alert-circle",
+          color: "#FF0055",
+          bgColor: "rgba(255, 0, 85, 0.2)",
+        };
+    }
+  };
+
+  const { icon, color, bgColor } = getIconAndColor();
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      onRequestClose={onClose}
+    >
+      <View style={alertStyles.overlay}>
+        <Animated.View
+          style={[
+            alertStyles.container,
+            {
+              transform: [{ scale: scaleAnim }],
+              opacity: opacityAnim,
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={[bgColor, "rgba(26, 26, 46, 0.95)"]}
+            style={alertStyles.gradient}
+          >
+            <View
+              style={[alertStyles.iconContainer, { backgroundColor: bgColor }]}
+            >
+              <Ionicons name={icon as any} size={40} color={color} />
+            </View>
+            <Text style={[alertStyles.title, { color }]}>{title}</Text>
+            <Text style={alertStyles.message}>{message}</Text>
+            <TouchableOpacity
+              style={[alertStyles.okButton, { backgroundColor: color }]}
+              onPress={onClose}
+            >
+              <Text style={alertStyles.okButtonText}>OK</Text>
+            </TouchableOpacity>
+          </LinearGradient>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+};
+
+const alertStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  container: {
+    width: "100%",
+    maxWidth: 340,
+    borderRadius: 20,
+    overflow: "hidden",
+  },
+  gradient: {
+    padding: 24,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 20,
+  },
+  iconContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  message: {
+    fontSize: 14,
+    color: "#AAAAAA",
+    textAlign: "center",
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  okButton: {
+    width: "100%",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  okButtonText: {
+    color: "#000000",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+});
+
 const Login = () => {
   const router = useRouter();
   const { login } = useAuth();
@@ -43,6 +204,25 @@ const Login = () => {
   });
 
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
+
+  // Custom Alert State
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertType, setAlertType] = useState<
+    "error" | "banned" | "deactivated"
+  >("error");
+  const [alertTitle, setAlertTitle] = useState("");
+  const [alertMessage, setAlertMessage] = useState("");
+
+  const showAlert = (
+    type: "error" | "banned" | "deactivated",
+    title: string,
+    message: string
+  ) => {
+    setAlertType(type);
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setAlertVisible(true);
+  };
 
   const validateEmail = (email: string) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -90,11 +270,19 @@ const Login = () => {
         } else {
           const errorMessage =
             result.error || "Login failed. Please check your credentials.";
-          Alert.alert("Error", errorMessage);
+
+          // Determine alert type based on error message
+          if (errorMessage.toLowerCase().includes("banned")) {
+            showAlert("banned", "Account Banned", errorMessage);
+          } else if (errorMessage.toLowerCase().includes("deactivated")) {
+            showAlert("deactivated", "Account Deactivated", errorMessage);
+          } else {
+            showAlert("error", "Login Failed", errorMessage);
+          }
         }
       } catch (error: any) {
         console.error("Login error", error);
-        Alert.alert("Error", "An unexpected error occurred.");
+        showAlert("error", "Error", "An unexpected error occurred.");
       } finally {
         setIsLoading(false);
       }
@@ -320,6 +508,15 @@ const Login = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Custom Login Alert */}
+      <LoginAlert
+        visible={alertVisible}
+        type={alertType}
+        title={alertTitle}
+        message={alertMessage}
+        onClose={() => setAlertVisible(false)}
+      />
     </View>
   );
 };

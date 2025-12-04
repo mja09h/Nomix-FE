@@ -23,8 +23,8 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useLanguage } from "../../../context/LanguageContext";
-import { useAuth } from "../../../context/AuthContext";
+import { useLanguage } from "../../../../context/LanguageContext";
+import { useAuth } from "../../../../context/AuthContext";
 import {
   getRecipeById,
   toggleLikeRecipe,
@@ -35,12 +35,12 @@ import {
   toggleLikeComment,
   addReplyToComment,
   toggleLikeReply,
-} from "../../../api/recipes";
-import { getImageUrl } from "../../../api/index";
-import { getUserById, toggleFavorite } from "../../../api/auth";
-import { Recipe, Comment, Reply } from "../../../types/Recipe";
-import Logo from "../../../components/Logo";
-import ReportModal from "../../../components/ReportModal";
+} from "../../../../api/recipes";
+import { getImageUrl } from "../../../../api/index";
+import { getUserById, toggleFavorite } from "../../../../api/auth";
+import { Recipe, Comment, Reply } from "../../../../types/Recipe";
+import Logo from "../../../../components/Logo";
+import ReportModal from "../../../../components/ReportModal";
 
 interface AuthorStats {
   recipesCount: number;
@@ -637,21 +637,21 @@ const RecipeDetail = () => {
                 isRTL && { flexDirection: "row-reverse" },
               ]}
             >
-              {recipe.calories && (
+              {recipe.calories ? (
                 <View style={styles.nutritionItem}>
                   <Ionicons name="flame" size={20} color="#FF6B6B" />
                   <Text style={styles.nutritionValue}>{recipe.calories}</Text>
                   <Text style={styles.nutritionLabel}>kcal</Text>
                 </View>
-              )}
-              {recipe.protein && (
+              ) : null}
+              {recipe.protein ? (
                 <View style={styles.nutritionItem}>
                   <Ionicons name="fitness" size={20} color="#4ECDC4" />
                   <Text style={styles.nutritionValue}>{recipe.protein}g</Text>
                   <Text style={styles.nutritionLabel}>Protein</Text>
                 </View>
-              )}
-              {recipe.carbohydrates && (
+              ) : null}
+              {recipe.carbohydrates ? (
                 <View style={styles.nutritionItem}>
                   <Ionicons name="nutrition" size={20} color="#FFE66D" />
                   <Text style={styles.nutritionValue}>
@@ -659,14 +659,14 @@ const RecipeDetail = () => {
                   </Text>
                   <Text style={styles.nutritionLabel}>Carbs</Text>
                 </View>
-              )}
-              {recipe.fat && (
+              ) : null}
+              {recipe.fat ? (
                 <View style={styles.nutritionItem}>
                   <Ionicons name="water" size={20} color="#A78BFA" />
                   <Text style={styles.nutritionValue}>{recipe.fat}g</Text>
                   <Text style={styles.nutritionLabel}>Fat</Text>
                 </View>
-              )}
+              ) : null}
             </View>
           </View>
         )}
@@ -1552,7 +1552,6 @@ const styles = StyleSheet.create({
     color: "#AAAAAA",
     fontSize: 12,
   },
-  // Comments Section
   commentsSection: {
     borderTopWidth: 1,
     borderTopColor: "rgba(255, 255, 255, 0.1)",

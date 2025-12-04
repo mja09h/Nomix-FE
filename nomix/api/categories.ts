@@ -49,3 +49,33 @@ export const deleteCategory = async (id: string): Promise<void> => {
         throw error;
     }
 };
+
+// Admin functions
+export const getAllCategoriesAdmin = async (): Promise<{ data: Category[]; total: number }> => {
+    try {
+        const response = await client.get('/categories/admin/all');
+        return { data: response.data.data, total: response.data.total };
+    } catch (error) {
+        console.error('Error fetching all categories (admin):', error);
+        throw error;
+    }
+};
+
+export const adminDeleteCategory = async (categoryId: string): Promise<void> => {
+    try {
+        await client.delete(`/categories/admin/${categoryId}`);
+    } catch (error) {
+        console.error(`Error deleting category ${categoryId} (admin):`, error);
+        throw error;
+    }
+};
+
+export const getReportsForCategory = async (categoryId: string): Promise<{ data: any[]; total: number }> => {
+    try {
+        const response = await client.get(`/categories/admin/${categoryId}/reports`);
+        return { data: response.data.data, total: response.data.total };
+    } catch (error) {
+        console.error(`Error fetching reports for category ${categoryId}:`, error);
+        throw error;
+    }
+};

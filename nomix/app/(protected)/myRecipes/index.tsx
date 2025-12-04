@@ -15,16 +15,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Logo from "../../../components/Logo";
 import { useLanguage } from "../../../context/LanguageContext";
+import { useAuth } from "../../../context/AuthContext";
 import { getAllRecipes } from "../../../api/recipes";
 import { getImageUrl } from "../../../api/index";
 import { Recipe } from "../../../types/Recipe";
-
 import { useRouter, useFocusEffect } from "expo-router";
 
-const Recipes = () => {
+const MyRecipes = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t, language } = useLanguage();
+  const { user } = useAuth();
   const isRTL = language === "ar";
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -35,7 +36,14 @@ const Recipes = () => {
   const fetchRecipes = async () => {
     try {
       const data = await getAllRecipes();
-      setRecipes(data);
+      // Filter to only show current user's recipes
+      const userRecipes = data.filter((recipe: Recipe) => {
+        if (!recipe.userId || !user?._id) return false;
+        const recipeUserId =
+          typeof recipe.userId === "string" ? recipe.userId : recipe.userId._id;
+        return recipeUserId === user._id;
+      });
+      setRecipes(userRecipes);
     } catch (error) {
       console.error("Failed to load recipes", error);
     } finally {
@@ -44,11 +52,10 @@ const Recipes = () => {
     }
   };
 
-  // Refetch recipes when screen comes into focus (updates view counts, etc.)
   useFocusEffect(
     useCallback(() => {
       fetchRecipes();
-    }, [])
+    }, [user?._id])
   );
 
   const onRefresh = () => {
@@ -61,10 +68,11 @@ const Recipes = () => {
   );
 
   const renderRecipeItem = ({ item }: { item: Recipe }) => {
-    // Handle instructions as array or string for description
     let description = "";
     if (Array.isArray(item.instructions) && item.instructions.length > 0) {
-      description = item.instructions[0];
+      const firstInstruction = item.instructions[0];
+      description =
+        typeof firstInstruction === "string" ? firstInstruction : "";
     } else if (typeof item.instructions === "string") {
       description = item.instructions;
     }
@@ -73,7 +81,7 @@ const Recipes = () => {
       <TouchableOpacity
         activeOpacity={0.9}
         style={styles.cardWrapper}
-        onPress={() => router.push(`/recipes/${item._id}`)}
+        onPress={() => router.push(`/(protected)/myRecipes/${item._id}`)}
       >
         <LinearGradient
           colors={["#00FFFF", "#FF00FF"]}
@@ -91,17 +99,19 @@ const Recipes = () => {
                 }}
                 style={styles.recipeImage}
               />
-              {item.calories && (
+              {item.calories ? (
                 <View style={styles.ratingBadge}>
                   <Ionicons name="flame" size={12} color="#FFD700" />
                   <Text style={styles.ratingText}>{item.calories}</Text>
                 </View>
-              )}
+              ) : null}
             </View>
 
             <View style={styles.cardContent}>
-              <View style={isRTL && { alignItems: "flex-end" }}>
-                <Text style={styles.recipeName}>{item.name}</Text>
+              <View style={isRTL ? { alignItems: "flex-end" } : undefined}>
+                <Text style={styles.recipeName} numberOfLines={1}>
+                  {item.name}
+                </Text>
                 <Text
                   style={[styles.recipeDesc, isRTL && { textAlign: "right" }]}
                   numberOfLines={2}
@@ -110,7 +120,6 @@ const Recipes = () => {
                 </Text>
               </View>
 
-              {/* Social Stats Row */}
               <View
                 style={[
                   styles.socialRow,
@@ -157,10 +166,24 @@ const Recipes = () => {
       <View
         style={[styles.headerTop, isRTL && { flexDirection: "row-reverse" }]}
       >
-        <Text style={styles.headerTitle}>{t("recipes.title")}</Text>
+        <View
+          style={[styles.headerLeft, isRTL && { flexDirection: "row-reverse" }]}
+        >
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons
+              name={isRTL ? "arrow-forward" : "arrow-back"}
+              size={24}
+              color="#FFFFFF"
+            />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>My Recipes</Text>
+        </View>
         <TouchableOpacity
           activeOpacity={0.8}
-          onPress={() => router.push("/recipes/add")}
+          onPress={() => router.push("/(protected)/myRecipes/add")}
         >
           <LinearGradient
             colors={["#00FFFF", "#FF00FF"]}
@@ -188,7 +211,7 @@ const Recipes = () => {
         />
         <TextInput
           style={[styles.searchInput, isRTL && { textAlign: "right" }]}
-          placeholder={t("recipes.search_placeholder")}
+          placeholder="Search your recipes..."
           placeholderTextColor="#666"
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -199,7 +222,6 @@ const Recipes = () => {
 
   return (
     <View style={styles.root}>
-      {/* Background Logo */}
       <View style={styles.backgroundLogoContainer} pointerEvents="none">
         <Logo />
       </View>
@@ -227,11 +249,21 @@ const Recipes = () => {
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="beaker-outline" size={64} color="#333" />
-              <Text style={styles.emptyText}>{t("recipes.no_recipes")}</Text>
-              <Text style={styles.emptySubText}>
-                {t("recipes.start_creating")}
-              </Text>
+              <Ionicons name="book-outline" size={64} color="#333" />
+              <Text style={styles.emptyText}>No recipes yet</Text>
+              <Text style={styles.emptySubText}>Create your first recipe!</Text>
+              <TouchableOpacity
+                style={styles.createButton}
+                onPress={() => router.push("/(protected)/myRecipes/add")}
+              >
+                <LinearGradient
+                  colors={["#00FFFF", "#FF00FF"]}
+                  style={styles.createButtonGradient}
+                >
+                  <Ionicons name="add" size={20} color="#FFFFFF" />
+                  <Text style={styles.createButtonText}>Create Recipe</Text>
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
           }
         />
@@ -240,7 +272,7 @@ const Recipes = () => {
   );
 };
 
-export default Recipes;
+export default MyRecipes;
 
 const styles = StyleSheet.create({
   root: {
@@ -273,8 +305,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   headerTitle: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "bold",
     color: "#FFFFFF",
     textShadowColor: "rgba(0, 255, 255, 0.5)",
@@ -372,42 +417,6 @@ const styles = StyleSheet.create({
     color: "#AAAAAA",
     lineHeight: 16,
   },
-  tagsContainer: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 8,
-    flexWrap: "wrap",
-  },
-  tag: {
-    backgroundColor: "rgba(0, 255, 255, 0.1)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(0, 255, 255, 0.2)",
-  },
-  tagText: {
-    color: "#00FFFF",
-    fontSize: 10,
-    fontWeight: "500",
-  },
-  emptyContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 100,
-    opacity: 0.5,
-  },
-  emptyText: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginTop: 20,
-  },
-  emptySubText: {
-    color: "#AAAAAA",
-    fontSize: 14,
-    marginTop: 8,
-  },
   socialRow: {
     flexDirection: "row",
     gap: 15,
@@ -424,5 +433,37 @@ const styles = StyleSheet.create({
   },
   socialTextLiked: {
     color: "#FF0055",
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 100,
+  },
+  emptyText: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginTop: 20,
+  },
+  emptySubText: {
+    color: "#AAAAAA",
+    fontSize: 14,
+    marginTop: 8,
+  },
+  createButton: {
+    marginTop: 25,
+  },
+  createButtonGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    gap: 8,
+  },
+  createButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });

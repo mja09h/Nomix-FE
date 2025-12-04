@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLanguage } from "../../context/LanguageContext";
 import Logo from "../../components/Logo";
+import ReportModal from "../../components/ReportModal";
 import {
   getAllIngredients,
   createIngredient,
@@ -44,6 +45,8 @@ const IngredientsPage = () => {
   const [ingredientName, setIngredientName] = useState("");
   const [ingredientQuantity, setIngredientQuantity] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reportingIngredient, setReportingIngredient] =
+    useState<Ingredient | null>(null);
 
   const fetchIngredients = async () => {
     try {
@@ -165,6 +168,12 @@ const IngredientsPage = () => {
           onPress={() => handleDelete(item)}
         >
           <Ionicons name="trash" size={18} color="#FF0055" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionBtn, styles.reportBtn]}
+          onPress={() => setReportingIngredient(item)}
+        >
+          <Ionicons name="flag" size={16} color="#FF0055" />
         </TouchableOpacity>
       </View>
     </View>
@@ -314,6 +323,15 @@ const IngredientsPage = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Report Ingredient Modal */}
+      <ReportModal
+        visible={!!reportingIngredient}
+        onClose={() => setReportingIngredient(null)}
+        targetType="ingredient"
+        targetId={reportingIngredient?._id || ""}
+        targetName={reportingIngredient?.name}
+      />
     </View>
   );
 };
@@ -430,6 +448,11 @@ const styles = StyleSheet.create({
   },
   deleteBtn: {
     backgroundColor: "rgba(255, 0, 85, 0.1)",
+  },
+  reportBtn: {
+    backgroundColor: "rgba(255, 0, 85, 0.2)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 0, 85, 0.4)",
   },
   emptyContainer: {
     alignItems: "center",

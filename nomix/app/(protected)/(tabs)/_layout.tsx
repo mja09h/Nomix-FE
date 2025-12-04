@@ -1,8 +1,8 @@
-import { StyleSheet, Platform } from "react-native";
+import { StyleSheet, Platform, Image, View } from "react-native";
 import React, { useEffect } from "react";
 import { Tabs } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import {
   schedulePushNotification,
   cancelAllNotifications,
@@ -44,12 +44,13 @@ const _layout = () => {
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarShowLabel: false,
         tabBarStyle: {
           backgroundColor: "#050510",
           borderTopColor: "rgba(0, 255, 255, 0.3)",
-          height: 60 + insets.bottom, // Dynamic height based on safe area
-          paddingBottom: insets.bottom > 0 ? insets.bottom : 10, // Adjust padding for safe area
-          paddingTop: 10,
+          height: 75 + insets.bottom,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 12,
+          paddingTop: 8,
         },
         tabBarActiveTintColor: "#00FFFF",
         tabBarInactiveTintColor: "#666",
@@ -58,36 +59,96 @@ const _layout = () => {
       <Tabs.Screen
         name="home"
         options={{
-          title: "Home",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.iconContainer}>
+              {focused && (
+                <LinearGradient
+                  colors={["rgba(0, 255, 255, 0.4)", "rgba(138, 43, 226, 0.3)"]}
+                  style={styles.activeGlow}
+                />
+              )}
+              <View
+                style={[styles.iconCircle, focused && styles.iconCircleActive]}
+              >
+                <Image
+                  source={require("../../../assets/nomix-home.png")}
+                  style={[styles.tabIcon, { opacity: focused ? 1 : 0.6 }]}
+                />
+              </View>
+              {focused && <View style={styles.activeIndicator} />}
+            </View>
           ),
         }}
       />
       <Tabs.Screen
-        name="categories"
+        name="recipes"
         options={{
-          title: "Recipes",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="restaurant" size={size} color={color} />
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.iconContainer}>
+              {focused && (
+                <LinearGradient
+                  colors={["rgba(0, 255, 255, 0.4)", "rgba(138, 43, 226, 0.3)"]}
+                  style={styles.activeGlow}
+                />
+              )}
+              <View
+                style={[styles.iconCircle, focused && styles.iconCircleActive]}
+              >
+                <Image
+                  source={require("../../../assets/nomix-recipes.png")}
+                  style={[styles.tabIcon, { opacity: focused ? 1 : 0.6 }]}
+                />
+              </View>
+              {focused && <View style={styles.activeIndicator} />}
+            </View>
           ),
         }}
       />
       <Tabs.Screen
         name="users"
         options={{
-          title: "Users",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people" size={size} color={color} />
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.iconContainer}>
+              {focused && (
+                <LinearGradient
+                  colors={["rgba(0, 255, 255, 0.4)", "rgba(138, 43, 226, 0.3)"]}
+                  style={styles.activeGlow}
+                />
+              )}
+              <View
+                style={[styles.iconCircle, focused && styles.iconCircleActive]}
+              >
+                <Image
+                  source={require("../../../assets/nomix-users.png")}
+                  style={[styles.tabIcon, { opacity: focused ? 1 : 0.6 }]}
+                />
+              </View>
+              {focused && <View style={styles.activeIndicator} />}
+            </View>
           ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.iconContainer}>
+              {focused && (
+                <LinearGradient
+                  colors={["rgba(0, 255, 255, 0.4)", "rgba(138, 43, 226, 0.3)"]}
+                  style={styles.activeGlow}
+                />
+              )}
+              <View
+                style={[styles.iconCircle, focused && styles.iconCircleActive]}
+              >
+                <Image
+                  source={require("../../../assets/nomix-profile.png")}
+                  style={[styles.tabIcon, { opacity: focused ? 1 : 0.6 }]}
+                />
+              </View>
+              {focused && <View style={styles.activeIndicator} />}
+            </View>
           ),
         }}
       />
@@ -97,4 +158,55 @@ const _layout = () => {
 
 export default _layout;
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  iconContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: 70,
+    height: 65,
+    position: "relative",
+  },
+  iconCircle: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+    overflow: "hidden",
+  },
+  iconCircleActive: {
+    backgroundColor: "rgba(0, 255, 255, 0.15)",
+    borderWidth: 2,
+    borderColor: "rgba(0, 255, 255, 0.5)",
+    shadowColor: "#00FFFF",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  tabIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 25,
+  },
+  activeGlow: {
+    position: "absolute",
+    width: 75,
+    height: 75,
+    borderRadius: 38,
+  },
+  activeIndicator: {
+    position: "absolute",
+    bottom: -5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#00FFFF",
+    shadowColor: "#00FFFF",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+});
